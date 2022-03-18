@@ -152,10 +152,19 @@ def pipeline_for_FIMO_analysis(matches_sorted_dict):
     global experiments
     global subsequences
     global attract_ppms, htselex_ppms
+    global diagram_title
 
+    fig = plt.figure(figsize=[18.3 / 2.54, 11.0 / 2.54], constrained_layout=True, dpi=300)
+    grid = fig.add_gridspec(1, 1)
+    ax3 = plt.subplot(grid[0, 0])
+    ax3.set_title(diagram_title)
+    ax3.plot([0, 0], [1, 1])
+    plt.show()
 
     # great outer loop for going through files
     for i, exp in enumerate(experiments):
+
+
         for l, subseq in enumerate(subsequences):
 
 
@@ -184,8 +193,8 @@ def pipeline_for_FIMO_analysis(matches_sorted_dict):
                 mean_cov_per_motif, std_cov_per_motif = get_mean_std(infos[motif])
 
                 autologous, background = calc_z_scores(infos[motif],
-                                                    mean_cov_per_motif,
-                                                    std_cov_per_motif)
+                                                       mean_cov_per_motif,
+                                                       std_cov_per_motif)
 
                 autologous_all_motifs.append(autologous)
                 background_all_motifs.append(background)
@@ -197,10 +206,6 @@ def pipeline_for_FIMO_analysis(matches_sorted_dict):
 
             number_of_motifs_used = count_amount_of_motifs_per_experiment(attract_ppms, htselex_ppms)
 
-            fig = plt.figure(figsize=[18.3 / 2.54, 11.0 / 2.54], constrained_layout=True, dpi=300)
-            grid = fig.add_gridspec(1, 1)
-            ax3 = plt.subplot(grid[0, 0])
-
             plot_analysis_results(ax3,
                                   autologous_all_motifs,
                                   background_all_motifs,
@@ -210,10 +215,7 @@ def pipeline_for_FIMO_analysis(matches_sorted_dict):
                                   l,
                                   subseq)
 
-                                  #calc_transcript = True,
-                                  #calc_CDS = True,
-                                  #calc_UTR3 = True,
-                                  #calc_UTR5 = True)
+    #plt.show()
 
 
 
@@ -369,19 +371,6 @@ def get_mean_std(matches_by_sequences):
 
     return mean_cov, std_cov
 
-
-def build_up_final_distribution_dict(exp, subseq):
-    sorter_subsequences = {"UTR3": "autologous UTR3",
-                     "UTR5": "autologous UTR5",
-                     "CDS": "autologous CDS",
-                     "transcript": "autologous transcript"}
-    subseq_alt = sorter_subsequences[subseq]
-    final_distributions = {}
-    final_distributions[exp] = {}
-    final_distributions[exp][subseq] = []
-    final_distributions[exp][subseq_alt] = []
-
-    return final_distributions
 
 
 def calc_z_scores(coverages_by_motif, mean_cov, std_cov):
@@ -651,11 +640,7 @@ def plot_analysis_results(ax3, autologous, background, pvalue, ppms, i, l, subse
 
     ax3.set_ylabel("motif coverage (nt/nt), z-score")
 
-    global diagram_title
-    ax3.set_title(diagram_title)
 
-    plt.grid()
-    plt.show()
 
 
 
