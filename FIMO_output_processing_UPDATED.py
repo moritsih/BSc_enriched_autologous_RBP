@@ -30,11 +30,11 @@ if pval_1000:
 if pval_10000:
     if transcriptome_background:
         diagram_title = "Enrichment of autologous binding via FIMO\nFull Transcriptome background of first order markov chain\nP-value cutoff: 1e-3"
-        data_path = os.path.join(os.getcwd( ), "DATA", "FIMO_OUT", "background_transcriptome")
+        data_path = os.path.join(os.getcwd( ), "DATA", "FIMO_OUT", "background_transcriptome_pval1e-4")
 
     if individual_background:
         diagram_title = "Enrichment of autologous binding via FIMO\nIndividual transcript parts as background - 1st order markov chain\nP-value cutoff: 1e+4"
-        data_path = os.path.join(os.getcwd( ), "DATA", "FIMO_OUT", "background_individual")
+        data_path = os.path.join(os.getcwd( ), "DATA", "FIMO_OUT", "background_individual_pval1e-4")
 
 
 directories = os.listdir(data_path)  # list of directiories containing output tsv files (& other files)
@@ -55,6 +55,12 @@ def rename_MANE_seqs_duplicated_motifs(MANE_transcriptome, rnacompete_ppms):
         if ppm not in MANE_transcriptome:
             ppm_name_without_extension = str(ppm)[:-2]
             MANE_transcriptome[ppm] = MANE_transcriptome[ppm_name_without_extension]
+
+    for key in MANE_transcriptome.keys():
+        if "cDNA" in MANE_transcriptome[key]:
+            MANE_transcriptome[key]["transcript"] = MANE_transcriptome[key].pop('cDNA')
+        else:
+            print(f"No cDNA key in {key}")
 
 rename_MANE_seqs_duplicated_motifs(MANE_transcriptome, rnacompete_ppms)
 
@@ -147,12 +153,10 @@ def pipeline_for_FIMO_analysis(matches_sorted_dict):
     global subsequences
     global attract_ppms, htselex_ppms
 
-    for key in MANE_transcriptome.keys( ):
-        MANE_transcriptome[key]["transcript"] = MANE_transcriptome[key].pop("cDNA")
 
     # great outer loop for going through files
     for i, exp in enumerate(experiments):
-        for subseq in subsequences:
+        for l, subseq in enumerate(subsequences):
 
 
             tsv_file_path = matches_sorted[exp][subseq]
@@ -163,45 +167,53 @@ def pipeline_for_FIMO_analysis(matches_sorted_dict):
             print(f">>> SEQUENCE LENGTHS HAVE BEEN ADDED TO THE DICTIONARY\n")
 
 
-            group_by_motif_id_and_sequence_id(infos)
+            infos = group_by_motif_id_and_sequence_id(infos)
 
 
-            calc_coverages_autol_len(infos,
-                                     subseq,
-                                     len_normalize=False,
-                                     consider_overlap=False,
-                                     background_longer_than_autol_only=False)
+            infos, len_normalize, consider_overlap = calc_coverages_autol_len(infos,
+                                                                             subseq,
+                                                                             len_normalize=False,
+                                                                             consider_overlap=False,
+                                                                             background_longer_than_autol_only=False)
             print(f">>> DONE WITH COVERAGE CALCULATIONS\n")
 
-            autologous, background = []
+            autologous_all_motifs = []
+            background_all_motifs = []
             for motif in infos.keys():
 
                 mean_cov_per_motif, std_cov_per_motif = get_mean_std(infos[motif])
 
                 autologous, background = calc_z_scores(infos[motif],
                                                     mean_cov_per_motif,
-                                                    std_cov_per_motif,
-                                                    motif)
+                                                    std_cov_per_motif)
 
-                autologous.append(autologous)
-                background.append(background)
+                autologous_all_motifs.append(autologous)
+                background_all_motifs.append(background)
 
             print(f">>> Z-SCORES HAVE BEEN CALCULATED\n")
 
 
-            p_val = binary_vs_averaged(autologous, background, ranked="no", side="higher")
+            p_val = binary_vs_averaged(autologous_all_motifs, background_all_motifs, ranked="no", side="higher")
 
             number_of_motifs_used = count_amount_of_motifs_per_experiment(attract_ppms, htselex_ppms)
 
-            plot_analysis_results(autologous,
-                                  background,
+            fig = plt.figure(figsize=[18.3 / 2.54, 11.0 / 2.54], constrained_layout=True, dpi=300)
+            grid = fig.add_gridspec(1, 1)
+            ax3 = plt.subplot(grid[0, 0])
+
+            plot_analysis_results(ax3,
+                                  autologous_all_motifs,
+                                  background_all_motifs,
                                   p_val,
                                   number_of_motifs_used,
                                   i, # see for-loop above: i helps put labels on the plot
-                                  calc_transcript = True,
-                                  calc_CDS = True,
-                                  calc_UTR3 = True,
-                                  calc_UTR5 = True)
+                                  l,
+                                  subseq)
+
+                                  #calc_transcript = True,
+                                  #calc_CDS = True,
+                                  #calc_UTR3 = True,
+                                  #calc_UTR5 = True)
 
 
 
@@ -298,9 +310,9 @@ def calc_coverages_autol_len(matches_by_subseq, subseq, len_normalize=False, con
 
                 if len_normalize:
                     cov[2] = cov[2] / seq_len
-                    matches_by_subseq[motif].append(cov)
+                    matches_by_subseq[motif][seq_id] = cov
                 else:
-                    matches_by_subseq[motif].append(cov)
+                    matches_by_subseq[motif][seq_id] = cov
 
 
 
@@ -330,13 +342,10 @@ def calc_coverages_autol_len(matches_by_subseq, subseq, len_normalize=False, con
 
                 if len_normalize:
                     cov[2] = cov[2] / seq_len
-                    matches_by_subseq[motif].append(cov)
+                    matches_by_subseq[motif][seq_id] = cov
                 else:
-                    matches_by_subseq[motif].append(cov)
+                    matches_by_subseq[motif][seq_id] = cov
 
-
-
-    #ppms[exp] = len(matches_by_subseq.keys())
 
     return matches_by_subseq, len_normalize, consider_overlap
 # coverages = data; len_norm and consider_overlap are for specifying the mode of analysis during plotting;
@@ -350,13 +359,12 @@ def get_mean_std(matches_by_sequences):
     mean_cov = []
     std_cov = []
 
-    for box in matches_by_sequences( ):
+    for box in matches_by_sequences.values():
         #box = all sequences a motif matched with
-        for i in range(len(box)):
-            mean_cov.append(box[i][2])
-            std_cov.append(box[i][2])
+        mean_cov.append(box[2])
+        std_cov.append(box[2])
 
-    mean_cov = np.nanmean(mean_cov[i])
+    mean_cov = np.nanmean(mean_cov)
     std_cov = np.nanstd(std_cov)
 
     return mean_cov, std_cov
@@ -376,38 +384,28 @@ def build_up_final_distribution_dict(exp, subseq):
     return final_distributions
 
 
-def calc_z_scores(coverages_by_motif, mean_cov, std_cov, motif_id):
+def calc_z_scores(coverages_by_motif, mean_cov, std_cov):
 
     mean = mean_cov
     std = std_cov
     background = []
-    autologous = []
-
-    for box in coverages_by_motif:
-        autologous_match_occurred = False # variable to include motifs that had matches (at all) but not the autologous one
-
-        # a "box" is a container. It's a list of lists containing all sequence matches
-        # of a single motif.
-        # box[0] would show all the matches the given motif (motif is the key in this nesting of the dict)
-        # has with a single sequence. The matches themselves are lists of the form
-        # [sequence id, motif id, coverage]
-
-        # when it did have a match, then it contains at least 1 list of shape [sequence id, motif id, coverage],
-        # where motif id is always the same and sequence ids are all sequences the motif had matches with
-
-        for i in range(len(box)):
-            seq_id = box[i][0]
-            z_val = (box[i][2] - mean) / std
-            background.append(z_val)
-
-            if seq_id == motif_id:
-                autologous.append(z_val)
-                autologous_match_occurred = True
+    autologous_match_occurred = False
 
 
-        if not autologous_match_occurred:
-            autologous.append((0 - mean) / std)
+    for info in coverages_by_motif.values():
+ # variable to include motifs that had matches (at all) but not the autologous one
 
+        seq_id = info[0]
+        motif_id = info[1]
+        z_val = (info[2] - mean) / std
+        background.append(z_val)
+
+        if seq_id == motif_id:
+            autologous = z_val
+            autologous_match_occurred = True
+
+    if not autologous_match_occurred:
+        autologous = ((0 - mean) / std)
 
     return autologous, background
 
@@ -515,8 +513,13 @@ def binary_vs_averaged(bi_ls, bi_ls_ls, ranked="no", side="higher"):
 
 # With this function, a combined plot for the different experiments is created and the p values
 # are calculated. The plot is then shown on screen.
-def plot_analysis_results(autologous, background, pvalue, ppms, i, calc_transcript = True, calc_CDS = True, calc_UTR3 = True, calc_UTR5 = True):
+def plot_analysis_results(ax3, autologous, background, pvalue, ppms, i, l, subseq):
     print("\n>>> PLOTTING THE DATA\n")
+
+    # As different subsequences need slighly different settings, I use "l" to go through these lists
+    autologous_points_horizontal_step = [0.05, 0.1, 0.15, 0.2]
+    point_colors = ["red", "orange", "lightblue", "blue"]
+    p_value_position = [-7, -7.5, -8, -8.5]
 
     size_tiny = 3
     size_small = 5
@@ -534,120 +537,126 @@ def plot_analysis_results(autologous, background, pvalue, ppms, i, calc_transcri
     plt.rc("figure", titlesize=size_big)     # fontsize of the figure title
     mpl.rcParams["legend.markerscale"] = 1.0
 
-    fig = plt.figure(figsize=[18.3/2.54, 11.0/2.54], constrained_layout=True, dpi=300)
-    grid = fig.add_gridspec(1,1)
-    ax3 = plt.subplot(grid[0,0])
-
     ##########################################################
     # PLOT LEFT SIDE of individual diagrams (autologous part):
     ##########################################################
     if i == 0:
-        if calc_transcript:
-            ax3.scatter([i-0.05]*len(autologous), autologous, linewidths=0, color="red", alpha=0.2, zorder=3, label="autol. RNA (z-score in resp. transcriptome)")
-            ax3.plot([i-0.25,i-0.05],[np.mean(autologous)]*2, color="red", zorder=2, label="(autologous) RNA (mean)", alpha=0.4)
 
-        if calc_CDS:
-            ax3.scatter([i-0.10]*len(autologous), autologous, linewidths=0, color="orange", alpha=0.2, zorder=3, label="autol. CDS (z-score in resp. transcriptome CDS)")
-            ax3.plot([i-0.25,i-0.05],[np.mean(autologous)]*2, color="orange", zorder=2, label="(autologous) CDS (mean)", alpha=0.4)
+        ax3.scatter([i-autologous_points_horizontal_step[l]] * len(autologous),
+                    autologous,
+                    linewidths=0,
+                    color=point_colors[l],
+                    alpha=0.2,
+                    zorder=3,
+                    label=f"autol. {subseq} (z-score in resp. transcriptome)")
 
-        if calc_UTR3:
-            ax3.scatter([i-0.15]*len(autologous), autologous, linewidths=0, color="lightblue", alpha=0.2, zorder=3, label="autol. UTR3 (z-score in resp. transcriptome UTR3)")
-            ax3.plot([i-0.25,i-0.05],[np.nanmean(autologous)]*2, color="lightblue", zorder=2, label="(autologous) UTR3 (mean)", alpha=0.4)
 
-        if calc_UTR5:
-            ax3.scatter([i-0.20]*len(autologous), autologous, linewidths=0, color="blue", alpha=0.2, zorder=3, label="autol. UTR5 (z-score in resp. transcriptome UTR5)")
-            ax3.plot([i-0.25,i-0.05],[np.nanmean(autologous)]*2, color="blue", zorder=2, label="(autologous) UTR5 (mean)", alpha=0.4)
+        ax3.plot([i-0.25,i-0.05],
+                 [np.mean(autologous)]*2,
+                 color=point_colors[l],
+                 zorder=2,
+                 label=f"(autologous) {subseq} (mean)",
+                 alpha=0.4)
+
 
     else:
-        if calc_transcript:
-            ax3.scatter([i-0.05]*len(autologous), autologous, linewidths=0, color="red", alpha=0.2, zorder=3)
-            ax3.plot([i-0.25,i-0.05],[np.mean(autologous)]*2, color="red", zorder=2, alpha=0.4)
-        if calc_CDS:
-            ax3.scatter([i-0.10]*len(autologous), autologous, linewidths=0, color="orange", alpha=0.2, zorder=3)
-            ax3.plot([i-0.25,i-0.05],[np.mean(autologous)]*2, color="orange", zorder=2, alpha=0.4)
-        if calc_UTR3:
-            ax3.scatter([i-0.15]*len(autologous), autologous, linewidths=0, color="lightblue", alpha=0.2, zorder=3)
-            ax3.plot([i-0.25,i-0.05],[np.mean(autologous)]*2, color="lightblue", zorder=2, alpha=0.4)
-
-        if calc_UTR5:
-            ax3.scatter([i-0.20]*len(autologous), autologous, linewidths=0, color="blue", alpha=0.2, zorder=3)
-            ax3.plot([i-0.25,i-0.05],[np.nanmean(autologous)]*2, color="blue", zorder=2, alpha=0.4)
+        ax3.scatter([i - autologous_points_horizontal_step[l]] * len(autologous),
+                    autologous, linewidths=0,
+                    color=point_colors[l],
+                    alpha=0.2, zorder=3)
 
 
-    if calc_transcript:
-        hist = vertical_hist(background, i+0.0, 0.6, borders=[-6,6], bin_number="standard", window_average=5)
-        vxs_trans, vys_trans, mean_trans = hist["x_smooth"],hist["y_smooth"],hist["mean"]
+        ax3.plot([i - 0.25, i - 0.05],
+                 [np.mean(autologous)] * 2,
+                 color=point_colors[l],
+                 zorder=2,
+                 alpha=0.4)
 
-    if calc_CDS:
-        hist = vertical_hist(background, i + 0.0, 0.6, borders=[-6, 6], bin_number="standard", window_average=5)
-        vxs_CDS, vys_CDS, mean_CDS = hist["x_smooth"],hist["y_smooth"],hist["mean"]
 
-    if calc_UTR3:
-        hist = vertical_hist(background, i+0.0, 0.6, borders=[-6,6], bin_number="standard", window_average=5)
-        vxs_UTR3, vys_UTR3, mean_UTR3 = hist["x_smooth"],hist["y_smooth"],hist["mean"]
+    hist = vertical_hist(background,
+                         i+0.0, 0.6,
+                         borders=[-6,6],
+                         bin_number="standard",
+                         window_average=5)
 
-    if calc_UTR5:
-        hist = vertical_hist(background, i+0.0, 0.6, borders=[-6,6], bin_number="standard", window_average=5)
-        vxs_UTR5, vys_UTR5, mean_UTR5 = hist["x_smooth"],hist["y_smooth"],hist["mean"]
+
+    vxs, vys, mean = hist["x_smooth"],hist["y_smooth"],hist["mean"]
 
 
     ##############################################################
     # PLOT RIGHT SIDE of individual diagrams (transcriptome part):
     ##############################################################
     if i == 0:
-        if calc_transcript:
-            ax3.plot(vxs_trans,vys_trans, color="red", zorder=2, label="transcriptome(s)\n(merged histogram)", alpha=0.5, linewidth=1)
-            ax3.plot([i+0.05,i+0.25],[mean_trans]*2, color="red", zorder=2, alpha=0.5)
-        if calc_CDS:
-            ax3.plot(vxs_CDS,vys_CDS, color="orange", zorder=2, label="CDS (merged histogram)", alpha=0.5, linewidth=1)
-            ax3.plot([i+0.05,i+0.25],[mean_CDS]*2, color="orange", zorder=2, alpha=0.5)
-        if calc_UTR3:
-            ax3.plot(vxs_UTR3,vys_UTR3, color="lightblue", zorder=2, label="UTR3 (merged histogram)", alpha=0.5, linewidth=1)
-            ax3.plot([i+0.05,i+0.25],[mean_UTR3]*2, color="lightblue", zorder=2, alpha=0.5)
-        if calc_UTR5:
-            ax3.plot(vxs_UTR5,vys_UTR5, color="blue", zorder=2, label="UTR5 (merged histogram)", alpha=0.5, linewidth=1)
-            ax3.plot([i+0.05,i+0.25],[mean_UTR5]*2, color="blue", zorder=2, alpha=0.5)
+
+        ax3.plot(vxs,
+                 vys,
+                 color=point_colors[l],
+                 zorder=2,
+                 label=f"{subseq}\n(merged histogram)",
+                 alpha=0.5,
+                 linewidth=1)
+
+        ax3.plot([i+0.05,i+0.25],
+                 [mean]*2,
+                 color=point_colors[l],
+                 zorder=2,
+                 alpha=0.5)
 
     else:
-        if calc_transcript:
-            ax3.plot(vxs_trans,vys_trans, color="red", zorder=2, alpha=0.5, linewidth=1)
-            ax3.plot([i+0.05,i+0.25],[mean_trans]*2, color="red", zorder=2, alpha=0.5)
-        if calc_CDS:
-            ax3.plot(vxs_CDS,vys_CDS, color="orange", zorder=2, alpha=0.5, linewidth=1)
-            ax3.plot([i+0.05,i+0.25],[mean_CDS]*2, color="orange", zorder=2, alpha=0.5)
-        if calc_UTR3:
-            ax3.plot(vxs_UTR3,vys_UTR3, color="lightblue", zorder=2, alpha=0.5, linewidth=1)
-            ax3.plot([i+0.05,i+0.25],[mean_UTR3]*2, color="lightblue", zorder=2, alpha=0.5)
-        if calc_UTR5:
-            ax3.plot(vxs_UTR5,vys_UTR5, color="blue", zorder=2, alpha=0.5, linewidth=1)
-            ax3.plot([i+0.05,i+0.25],[mean_UTR5]*2, color="blue", zorder=2, alpha=0.5)
+
+        ax3.plot(vxs,
+                 vys,
+                 color=point_colors[l],
+                 zorder=2,
+                 alpha=0.5,
+                 linewidth=1)
+
+        ax3.plot([i+0.05,i+0.25],
+                 [mean]*2,
+                 color=point_colors[l],
+                 zorder=2,
+                 alpha=0.5)
+
 
     # Write number of RBPs and p values for different experiments:
-    ax3.text(i, -6.5, "N = %.0f"%ppms[i], ha="center")
-    if calc_transcript:
-        ax3.text(i, -7, "$p_{transcript}$ = %.7f"%pvalue, ha="center", color="red")
-    if calc_CDS:
-        ax3.text(i, -7.5, "$p_{CDS}$ = %.7f"%pvalue, ha="center", color="orange")
-    if calc_UTR3:
-        ax3.text(i, -8, "$p_{UTR3}$ = %.7f"%pvalue, ha="center", color="lightblue")
-    if calc_UTR5:
-        ax3.text(i, -8.5, "$p_{UTR5}$ = %.7f"%pvalue, ha="center", color="blue")
+    ax3.text(i,
+             -6.5,
+             "N = %.0f"%ppms[i],
+             ha="center")
+
+
+    ax3.text(i,
+             p_value_position,
+             f"$p_{subseq}$ = {pvalue}",
+             ha="center",
+             color=point_colors[l])
+
 
     ax3.set_ylim([-6,6])
+
     ticklist = [i for i in range(len(my_EXPERIMENTS))]
+
     ax3.xaxis.tick_top()
+
     ax3.set_xticks(ticklist)
+
     ax3.set_xticklabels(my_EXPERIMENTS)
 
-    ax3.legend(ncol=2, edgecolor="grey", framealpha = 0.8, facecolor = "white", frameon=True, loc=4)
+    ax3.legend(ncol=2,
+               edgecolor="grey",
+               framealpha = 0.8,
+               facecolor = "white",
+               frameon=True,
+               loc=4)
+
     ax3.set_ylabel("motif coverage (nt/nt), z-score")
 
     global diagram_title
-    #diagram_title = "FIMO analysis with p-value cutoff of 1e-4 - coverages length normalized"
-
     ax3.set_title(diagram_title)
 
     plt.grid()
     plt.show()
+
+
 
 pipeline_for_FIMO_analysis(matches_sorted)
