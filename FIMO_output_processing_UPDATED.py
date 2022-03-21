@@ -8,17 +8,18 @@ from FIMO_input_processing import MANE_transcriptome, attract_ppms, htselex_ppms
 MANE_transcriptome = MANE_transcriptome
 from additional_code.load_histograms import vertical_hist
 import seaborn as sns
-
+from tqdm import tqdm
 
 ###########################################################################
 #CHANGE THESE SETTINGS TO RUN DIFFERENT ANALYSES
 ###########################################################################
-pval_100 = False
+pval_100 = True
 pval_1000 = False
-pval_10000 = True
+pval_10000 = False
 transcriptome_background = True
 individual_background = False
 ###########################################################################
+
 if pval_100:
     diagram_title = "Enrichment of autologous binding via FIMO\nFull Transcriptome background of first order markov chain\nP-value cutoff: 1e-2"
     data_path = os.path.join(os.getcwd(), "DATA", "FIMO_OUT", "background_transcriptome_pval1e-2")
@@ -49,20 +50,6 @@ selex_ppms = list(attract_ppms["SELEX"].keys( ))
 htselex_ppms = list(htselex_ppms.keys( ))
 rbps = [rnacompete_ppms, selex_ppms, htselex_ppms]
 
-
-def rename_MANE_seqs_duplicated_motifs(MANE_transcriptome, rnacompete_ppms):
-    for ppm in rnacompete_ppms:
-        if ppm not in MANE_transcriptome:
-            ppm_name_without_extension = str(ppm)[:-2]
-            MANE_transcriptome[ppm] = MANE_transcriptome[ppm_name_without_extension]
-
-    for key in MANE_transcriptome.keys():
-        if "cDNA" in MANE_transcriptome[key]:
-            MANE_transcriptome[key]["transcript"] = MANE_transcriptome[key].pop('cDNA')
-        else:
-            print(f"No cDNA key in {key}")
-
-rename_MANE_seqs_duplicated_motifs(MANE_transcriptome, rnacompete_ppms)
 
 def store_filenames_for_retrieval():
     global data_path
@@ -108,7 +95,7 @@ matches_sorted = sort_matches(matches_raw)
 
 def read_tsv_file(tsv_file_path):
     with open(tsv_file_path, "r") as f:
-        header = f.readline()
+        _ = f.readline()
         content = f.read().split("\n")
         content = [x for x in content if x and not x.startswith("#")]  # removing bottom lines
 
@@ -148,6 +135,7 @@ def plot_num_matches(match_dict):
 #plot_num_matches(matches_sorted)
 
 
+
 def pipeline_for_FIMO_analysis(matches_sorted_dict):
     global MANE_transcriptome
     global experiments
@@ -164,13 +152,19 @@ def pipeline_for_FIMO_analysis(matches_sorted_dict):
 
         for l, subseq in enumerate(subsequences):
 
+
             tsv_file_path = matches_sorted[exp][subseq]
 
             infos = read_tsv_file(tsv_file_path)
 
+
+
             add_sequence_length_to_infos(infos, subseq)
 
             infos = group_by_motif_id_and_sequence_id(infos)
+
+            #with tqdm(total=set_tqdm_counter_total()) as pbar:
+            #    pbar.update(1)
 
             infos, len_normalize, consider_overlap = calc_coverages_autol_len(infos,
                                                                              subseq,
@@ -213,6 +207,10 @@ def pipeline_for_FIMO_analysis(matches_sorted_dict):
         print(">>> PLOTTING THE DATA\n")
 
     plt.show()
+
+
+def set_tqdm_counter_total(match_list):
+    return len(match_list)
 
 
 def set_plotting_details():
@@ -532,7 +530,7 @@ def plot_analysis_results(ax3, autologous, background, pvalue, ppms, i, l, subse
 
         ax3.scatter([i-autologous_points_horizontal_step[l]] * len(autologous),
                     autologous,
-                    linewidths=0.001,
+                    linewidths=0,
                     color=point_colors[l],
                     alpha=0.2,
                     zorder=3,
@@ -550,7 +548,7 @@ def plot_analysis_results(ax3, autologous, background, pvalue, ppms, i, l, subse
     else:
         ax3.scatter([i - autologous_points_horizontal_step[l]] * len(autologous),
                     autologous,
-                    linewidths=0.001,
+                    linewidths=0,
                     color=point_colors[l],
                     alpha=0.2,
                     zorder=3)
@@ -641,7 +639,6 @@ def plot_analysis_results(ax3, autologous, background, pvalue, ppms, i, l, subse
                loc=4)
 
     ax3.set_ylabel("motif coverage (nt/nt), z-score")
-
 
 
 
