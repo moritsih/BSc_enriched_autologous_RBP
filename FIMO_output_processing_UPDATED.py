@@ -147,6 +147,7 @@ def plot_num_matches(match_dict):
 
 #plot_num_matches(matches_sorted)
 
+
 def pipeline_for_FIMO_analysis(matches_sorted_dict):
     global MANE_transcriptome
     global experiments
@@ -157,41 +158,32 @@ def pipeline_for_FIMO_analysis(matches_sorted_dict):
     fig = plt.figure(figsize=[18.3 / 2.54, 11.0 / 2.54], constrained_layout=True, dpi=300)
     grid = fig.add_gridspec(1, 1)
     ax3 = plt.subplot(grid[0, 0])
-    ax3.set_title(diagram_title)
-    ax3.plot([0, 0], [1, 1])
-    plt.show()
 
     # great outer loop for going through files
     for i, exp in enumerate(experiments):
 
-
         for l, subseq in enumerate(subsequences):
 
-
             tsv_file_path = matches_sorted[exp][subseq]
+
             infos = read_tsv_file(tsv_file_path)
 
-
             add_sequence_length_to_infos(infos, subseq)
-            print(f">>> SEQUENCE LENGTHS HAVE BEEN ADDED TO THE DICTIONARY\n")
-
 
             infos = group_by_motif_id_and_sequence_id(infos)
-
 
             infos, len_normalize, consider_overlap = calc_coverages_autol_len(infos,
                                                                              subseq,
                                                                              len_normalize=False,
                                                                              consider_overlap=False,
                                                                              background_longer_than_autol_only=False)
-            print(f">>> DONE WITH COVERAGE CALCULATIONS\n")
+
 
             autologous_all_motifs = []
             background_all_motifs = []
+
             for motif in infos.keys():
-
                 mean_cov_per_motif, std_cov_per_motif = get_mean_std(infos[motif])
-
                 autologous, background = calc_z_scores(infos[motif],
                                                        mean_cov_per_motif,
                                                        std_cov_per_motif)
@@ -199,12 +191,11 @@ def pipeline_for_FIMO_analysis(matches_sorted_dict):
                 autologous_all_motifs.append(autologous)
                 background_all_motifs.append(background)
 
-            print(f">>> Z-SCORES HAVE BEEN CALCULATED\n")
-
-
             p_val = binary_vs_averaged(autologous_all_motifs, background_all_motifs, ranked="no", side="higher")
 
             number_of_motifs_used = count_amount_of_motifs_per_experiment(attract_ppms, htselex_ppms)
+
+            set_plotting_details()
 
             plot_analysis_results(ax3,
                                   autologous_all_motifs,
@@ -215,8 +206,32 @@ def pipeline_for_FIMO_analysis(matches_sorted_dict):
                                   l,
                                   subseq)
 
-    #plt.show()
 
+
+        print(">>> DONE WITH COVERAGE CALCULATIONS\n")
+        print(">>> Z-SCORES HAVE BEEN CALCULATED\n")
+        print(">>> PLOTTING THE DATA\n")
+
+    plt.show()
+
+
+def set_plotting_details():
+
+    size_tiny = 3
+    size_small = 5
+    size_medium = 9
+    size_big = 10
+    plt.rcParams["axes.facecolor"] = "white"
+    plt.rcParams["font.family"] = "Calibri"
+    plt.rcParams["lines.markersize"] = 4
+    plt.rc("font", size=size_tiny)          # controls default text sizes
+    plt.rc("axes", titlesize=size_tiny)     # fontsize of the axes title
+    plt.rc("axes", labelsize=size_tiny)     # fontsize of the x and y labels
+    plt.rc("xtick", labelsize=size_small)    # fontsize of the tick labels
+    plt.rc("ytick", labelsize=size_small)    # fontsize of the tick labels
+    plt.rc("legend", fontsize=size_tiny)     # legend fontsize
+    plt.rc("figure", titlesize=size_big)     # fontsize of the figure title
+    mpl.rcParams["legend.markerscale"] = 1.0
 
 
 def count_amount_of_motifs_per_experiment(attract, htselex):
@@ -503,28 +518,12 @@ def binary_vs_averaged(bi_ls, bi_ls_ls, ranked="no", side="higher"):
 # With this function, a combined plot for the different experiments is created and the p values
 # are calculated. The plot is then shown on screen.
 def plot_analysis_results(ax3, autologous, background, pvalue, ppms, i, l, subseq):
-    print("\n>>> PLOTTING THE DATA\n")
 
     # As different subsequences need slighly different settings, I use "l" to go through these lists
     autologous_points_horizontal_step = [0.05, 0.1, 0.15, 0.2]
     point_colors = ["red", "orange", "lightblue", "blue"]
     p_value_position = [-7, -7.5, -8, -8.5]
 
-    size_tiny = 3
-    size_small = 5
-    size_medium = 9
-    size_big = 10
-    plt.rcParams["axes.facecolor"] = "white"
-    plt.rcParams["font.family"] = "Calibri"
-    plt.rcParams["lines.markersize"] = 4
-    plt.rc("font", size=size_tiny)          # controls default text sizes
-    plt.rc("axes", titlesize=size_tiny)     # fontsize of the axes title
-    plt.rc("axes", labelsize=size_tiny)     # fontsize of the x and y labels
-    plt.rc("xtick", labelsize=size_small)    # fontsize of the tick labels
-    plt.rc("ytick", labelsize=size_small)    # fontsize of the tick labels
-    plt.rc("legend", fontsize=size_tiny)     # legend fontsize
-    plt.rc("figure", titlesize=size_big)     # fontsize of the figure title
-    mpl.rcParams["legend.markerscale"] = 1.0
 
     ##########################################################
     # PLOT LEFT SIDE of individual diagrams (autologous part):
@@ -533,26 +532,28 @@ def plot_analysis_results(ax3, autologous, background, pvalue, ppms, i, l, subse
 
         ax3.scatter([i-autologous_points_horizontal_step[l]] * len(autologous),
                     autologous,
-                    linewidths=0,
+                    linewidths=0.001,
                     color=point_colors[l],
                     alpha=0.2,
                     zorder=3,
-                    label=f"autol. {subseq} (z-score in resp. transcriptome)")
+                    label="autol.(z-score in resp. transcriptome)")
 
 
         ax3.plot([i-0.25,i-0.05],
                  [np.mean(autologous)]*2,
                  color=point_colors[l],
                  zorder=2,
-                 label=f"(autologous) {subseq} (mean)",
+                 label="(autologous)(mean)",
                  alpha=0.4)
 
 
     else:
         ax3.scatter([i - autologous_points_horizontal_step[l]] * len(autologous),
-                    autologous, linewidths=0,
+                    autologous,
+                    linewidths=0.001,
                     color=point_colors[l],
-                    alpha=0.2, zorder=3)
+                    alpha=0.2,
+                    zorder=3)
 
 
         ax3.plot([i - 0.25, i - 0.05],
@@ -563,7 +564,8 @@ def plot_analysis_results(ax3, autologous, background, pvalue, ppms, i, l, subse
 
 
     hist = vertical_hist(background,
-                         i+0.0, 0.6,
+                         i+0.0,
+                         0.6,
                          borders=[-6,6],
                          bin_number="standard",
                          window_average=5)
@@ -581,7 +583,7 @@ def plot_analysis_results(ax3, autologous, background, pvalue, ppms, i, l, subse
                  vys,
                  color=point_colors[l],
                  zorder=2,
-                 label=f"{subseq}\n(merged histogram)",
+                 label="(merged histogram)",
                  alpha=0.5,
                  linewidth=1)
 
@@ -607,7 +609,7 @@ def plot_analysis_results(ax3, autologous, background, pvalue, ppms, i, l, subse
                  alpha=0.5)
 
 
-    # Write number of RBPs and p values for different experiments:
+    #Write number of RBPs and p values for different experiments:
     ax3.text(i,
              -6.5,
              "N = %.0f"%ppms[i],
@@ -615,7 +617,7 @@ def plot_analysis_results(ax3, autologous, background, pvalue, ppms, i, l, subse
 
 
     ax3.text(i,
-             p_value_position,
+             p_value_position[l],
              f"$p_{subseq}$ = {pvalue}",
              ha="center",
              color=point_colors[l])
@@ -623,7 +625,7 @@ def plot_analysis_results(ax3, autologous, background, pvalue, ppms, i, l, subse
 
     ax3.set_ylim([-6,6])
 
-    ticklist = [i for i in range(len(my_EXPERIMENTS))]
+    ticklist = [k for k in range(len(my_EXPERIMENTS))]
 
     ax3.xaxis.tick_top()
 
@@ -639,7 +641,6 @@ def plot_analysis_results(ax3, autologous, background, pvalue, ppms, i, l, subse
                loc=4)
 
     ax3.set_ylabel("motif coverage (nt/nt), z-score")
-
 
 
 
