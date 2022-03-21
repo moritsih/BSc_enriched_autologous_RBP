@@ -30,7 +30,7 @@ if pval_1000:
 if pval_10000:
     if transcriptome_background:
         diagram_title = "Enrichment of autologous binding via FIMO\nFull Transcriptome background of first order markov chain\nP-value cutoff: 1e-3"
-        data_path = os.path.join(os.getcwd( ), "DATA", "FIMO_OUT", "background_transcriptome")
+        data_path = os.path.join(os.getcwd( ), "DATA", "FIMO_OUT", "background_transcriptome_pval1e-4")
 
     if individual_background:
         diagram_title = "Enrichment of autologous binding via FIMO\nIndividual transcript parts as background - 1st order markov chain\nP-value cutoff: 1e+4"
