@@ -182,16 +182,21 @@ for id, content in dict_MANE.items():
 print(">>> DONE SPLITTING MANE SEQUENCES INTO SUBSEQUENCES\n")
 
 
-def rename_MANE_transcript_key(MANE_transcriptome):
+def rename_MANE_seqs_duplicated_motifs(MANE_transcriptome, rnacompete_ppms):
+    for ppm in rnacompete_ppms:
+        if ppm not in MANE_transcriptome:
+            ppm_name_without_extension = str(ppm)[:-2]
+            MANE_transcriptome[ppm] = MANE_transcriptome[ppm_name_without_extension]
 
     for key in MANE_transcriptome.keys():
         if "cDNA" in MANE_transcriptome[key].keys():
             MANE_transcriptome[key]["transcript"] = MANE_transcriptome[key].pop('cDNA')
+        elif "transcript" in MANE_transcriptome[key]:
+            continue
 
     return MANE_transcriptome
 
-MANE_transcriptome = rename_MANE_transcript_key(MANE_transcriptome)
-
+MANE_transcriptome = rename_MANE_seqs_duplicated_motifs(MANE_transcriptome, attract_ppms["RNAcomp"])
 
 ###############################################################################################################################################
 # FILTER UTRs AND CDS FOR EMPTY/SHORT SEQUENCES;
