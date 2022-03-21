@@ -13,9 +13,9 @@ from tqdm import tqdm
 ###########################################################################
 #CHANGE THESE SETTINGS TO RUN DIFFERENT ANALYSES
 ###########################################################################
-pval_100 = True
+pval_100 = False
 pval_1000 = False
-pval_10000 = False
+pval_10000 = True
 transcriptome_background = True
 individual_background = False
 ###########################################################################
@@ -40,17 +40,17 @@ if pval_10000:
 
 directories = os.listdir(data_path)  # list of directiories containing output tsv files (& other files)
 
-
+# used for loop
 experiments = ["RNAcompete", "SELEX", "HT-SELEX"]
 subsequences = ["UTR3", "UTR5", "CDS", "transcript"]
 
-
+# prints amount of analyzed RBPs per experiment onto plot
 rnacompete_ppms = list(attract_ppms["RNAcomp"].keys( ))
 selex_ppms = list(attract_ppms["SELEX"].keys( ))
 htselex_ppms = list(htselex_ppms.keys( ))
 rbps = [rnacompete_ppms, selex_ppms, htselex_ppms]
 
-
+# stores access to folders where the FIMO-output data lies; for retrieval inside loop
 def store_filenames_for_retrieval():
     global data_path
     global directories
@@ -157,21 +157,23 @@ def pipeline_for_FIMO_analysis(matches_sorted_dict):
 
             infos = read_tsv_file(tsv_file_path)
 
-
-
             add_sequence_length_to_infos(infos, subseq)
 
-            infos = group_by_motif_id_and_sequence_id(infos)
+            infos, duplicated_matrices = group_by_motif_id_and_sequence_id(infos)
 
             #with tqdm(total=set_tqdm_counter_total()) as pbar:
             #    pbar.update(1)
 
-            infos, len_normalize, consider_overlap = calc_coverages_autol_len(infos,
-                                                                             subseq,
-                                                                             len_normalize=False,
-                                                                             consider_overlap=False,
-                                                                             background_longer_than_autol_only=False)
-
+            infos, \
+            len_normalize, \
+            consider_overlap, \
+            normalize_by_num_of_matrices = calc_coverages_autol_len(infos,
+                                                                    subseq,
+                                                                    duplicated_matrices,
+                                                                    len_normalize=False,
+                                                                    consider_overlap=False,
+                                                                    background_longer_than_autol_only=False,
+                                                                    normalize_by_num_of_matrices=True)
 
             autologous_all_motifs = []
             background_all_motifs = []
@@ -254,11 +256,20 @@ def add_sequence_length_to_infos(infos, subseq):
 
 
 
-def group_by_motif_id_and_sequence_id(matches_by_motif):
+def group_by_motif_id_and_sequence_id(matches_by_motif, merge_duplicate_motifs=False):
     motif_subseq = {}
+    duplicated_matrices = {}
+
     for match in matches_by_motif:
+        duplication_counter = 1 # counts amount of different matrices per motif (if there are duplicates)
         seq_id = match[0]
         motif_id = match[1]
+        if merge_duplicate_motifs: # Some RNAcompete RBPs had multiple matrices; Merge matches to 1 or keep separate?
+            if "_" in motif_id:
+                num_of_duplicates = int(motif_id[-1]) + 1 # if matrix has suffix _4, then it'll store "5"
+                motif_id = motif_id[:-2] #removes _1 suffix; enables "merging" of matches
+                duplicated_matrices[motif_id] = num_of_duplicates
+
         if motif_id not in motif_subseq:
             motif_subseq[motif_id] = {}
 
@@ -266,12 +277,18 @@ def group_by_motif_id_and_sequence_id(matches_by_motif):
             motif_subseq[motif_id][seq_id] = []
 
         motif_subseq[motif_id][seq_id].append(match)
-    return motif_subseq
+    return motif_subseq, duplicated_matrices
 
 
 
 
-def calc_coverages_autol_len(matches_by_subseq, subseq, len_normalize=False, consider_overlap=False, background_longer_than_autol_only=False):
+def calc_coverages_autol_len(matches_by_subseq,
+                             subseq,
+                             duplicated_matrices,
+                             len_normalize=False,
+                             consider_overlap=False,
+                             background_longer_than_autol_only=False,
+                             normalize_by_num_of_matrices=False):
 
     for motif in matches_by_subseq:
 
@@ -282,7 +299,8 @@ def calc_coverages_autol_len(matches_by_subseq, subseq, len_normalize=False, con
             seq_id = seq[0][0]
             motif_id = seq[0][1]
 
-            if background_longer_than_autol_only:
+            if background_longer_than_autol_only: # only include background if the matched sequence is of same length
+                                                  # or longer than autologous sequence
 
                 if seq_len >= autologous_seq_len:
 
@@ -323,9 +341,23 @@ def calc_coverages_autol_len(matches_by_subseq, subseq, len_normalize=False, con
                 else:
                     continue
 
+                if normalize_by_num_of_matrices and len_normalize:
+                    num_of_duplicates = duplicated_matrices[motif]
+                    cov[2] = cov[2] / (num_of_duplicates * seq_len)
+                    matches_by_subseq[motif][seq_id] = cov
+                    continue
+
+                if normalize_by_num_of_matrices:
+                    num_of_duplicates = duplicated_matrices[motif]
+                    cov[2] = cov[2] / num_of_duplicates
+                    matches_by_subseq[motif][seq_id] = cov
+                    continue
+
                 if len_normalize:
                     cov[2] = cov[2] / seq_len
                     matches_by_subseq[motif][seq_id] = cov
+                    continue
+
                 else:
                     matches_by_subseq[motif][seq_id] = cov
 
@@ -362,7 +394,7 @@ def calc_coverages_autol_len(matches_by_subseq, subseq, len_normalize=False, con
                     matches_by_subseq[motif][seq_id] = cov
 
 
-    return matches_by_subseq, len_normalize, consider_overlap
+    return matches_by_subseq, len_normalize, consider_overlap, normalize_by_num_of_matrices
 # coverages = data; len_norm and consider_overlap are for specifying the mode of analysis during plotting;
 # ppms gives the number of matching motifs to the plot (N = )
     # coverages: holds motifs and the sequences each motif matched with. For every sequence, there's a coverage
