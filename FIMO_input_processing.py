@@ -5,7 +5,6 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 dict_MANE = dict_MANE
-
 ###############################################################################################################################################
 # FUNCTIONS THAT EXTRACT 1. PPMS FROM ATtRACT, 2. PPMS FROM HTSELEX
 ###############################################################################################################################################
@@ -52,8 +51,11 @@ def extract_selex_ppm(selex_ppm, f_only_monomer=True):
             if counter == length:
                 if f_only_monomer and mer_status == "dimeric":
                     continue
+                elif gene_id not in dict_MANE:
+                    continue
                 else:
                     dict_htselex_ppms[gene_id] = dict_curr_PPM
+
 
     return dict_htselex_ppms
 
@@ -132,7 +134,6 @@ def read_db_attract(experiment_name, f_organism, f_experiment, f_score=True, f_m
         for gene_id, matrix_id in dict_attract_db.items():
             attract_ppms[gene_id] = dict_ppms[matrix_id]
 
-    print("Hi")
     return attract_ppms
 
 attract_ppms = {}
@@ -143,15 +144,10 @@ RNAcomp_ppm_num = len(attract_ppms["RNAcomp"].keys())
 SELEX_ppm_num = len(attract_ppms["SELEX"].keys())
 htselex_ppm_num = len(htselex_ppms.keys())
 
-array = []
-for k in htselex_ppms.keys():
-    array.append(len(htselex_ppms[k]))
-
-for exp in attract_ppms.keys():
-    exps = attract_ppms[exp]
-    for ppm in exps:
-        array.append(len(exp))
-
+print(">>> DONE CREATING PPM DICTIONARIES FOR FURTHER PROCESSING\n")
+print(f">>> NUM OF ATTRACT RNAcomp MOTIFS (pre-filter): {RNAcomp_ppm_num}\n")
+print(f">>> NUM OF ATTRACT RNAcomp MOTIFS (pre-filter): {SELEX_ppm_num}\n")
+print(f">>> NUM OF HT-SELEX MOTIFS (pre-filter): {htselex_ppm_num}\n")
 
 def plot_motif_length_distribution(list_of_motif_lengths):
     list_of_motif_lengths = sorted(list_of_motif_lengths)
@@ -166,10 +162,7 @@ def plot_motif_length_distribution(list_of_motif_lengths):
 
 #plot_motif_length_distribution(array)
 
-print(">>> DONE CREATING PPM DICTIONARIES FOR FURTHER PROCESSING\n")
-print(f">>> NUM OF ATTRACT RNAcomp MOTIFS (pre-filter): {RNAcomp_ppm_num}\n")
-print(f">>> NUM OF ATTRACT RNAcomp MOTIFS (pre-filter): {SELEX_ppm_num}\n")
-print(f">>> NUM OF HT-SELEX MOTIFS (pre-filter): {htselex_ppm_num}\n")
+
 
 
 
@@ -189,6 +182,23 @@ for id, content in dict_MANE.items():
 print(">>> DONE SPLITTING MANE SEQUENCES INTO SUBSEQUENCES\n")
 
 
+def rename_MANE_seqs_duplicated_motifs(MANE_transcriptome, rnacompete_ppms):
+    for ppm in rnacompete_ppms:
+        if ppm not in MANE_transcriptome:
+            ppm_name_without_extension = str(ppm)[:-2]
+            MANE_transcriptome[ppm] = MANE_transcriptome[ppm_name_without_extension]
+
+    for key in MANE_transcriptome.keys():
+        if "cDNA" in MANE_transcriptome[key].keys():
+            MANE_transcriptome[key]["transcript"] = MANE_transcriptome[key].pop('cDNA')
+        elif "transcript" in MANE_transcriptome[key]:
+            continue
+
+    return MANE_transcriptome
+
+MANE_transcriptome = rename_MANE_seqs_duplicated_motifs(MANE_transcriptome, attract_ppms["RNAcomp"])
+
+
 ###############################################################################################################################################
 # FILTER UTRs AND CDS FOR EMPTY/SHORT SEQUENCES;
 # DETERMINE A CUTOFF FOR SEQUENCE LENGTH 20
@@ -202,34 +212,9 @@ def len_cutoff_subseq(cutoff=20):
 
     print(">>> DONE FILTERING FOR SUBSEQUENCE LENGTH\n")
 
-len_cutoff_subseq(cutoff=20)
-
-'''###############################################################################################################################################
-# CHECK IN MOTIF DATA WHETHER CORRESPONDING SEQUENCE GOT FILTERED DUE TO LENGTH
-###############################################################################################################################################
-
-def filter_motifs(attract_ppms, htselex_ppms, seq_too_short):
-    exps = ["RNAcomp", "SELEX"]
-
-    for exp in exps:
-        attract_ppms[exp] = {k: v for (k, v) in attract_ppms[exp].items() if k not in seq_too_short}
-
-    htselex_ppms = {k: v for (k, v) in htselex_ppms.items() if k not in seq_too_short}
-
-    RNAcomp_ppm_num = len(attract_ppms["RNAcomp"].keys())
-    SELEX_ppm_num = len(attract_ppms["SELEX"].keys())
-    htselex_ppm_num = len(htselex_ppms.keys())
-
-    print(f">>> NUM OF ATTRACT RNAcomp MOTIFS (post-filter): {RNAcomp_ppm_num}")
-    print(f">>> NUM OF ATTRACT RNAcomp MOTIFS (post-filter): {SELEX_ppm_num}")
-    print(f">>> NUM OF HT-SELEX MOTIFS (post-filter): {htselex_ppm_num}")
-
-    return attract_ppms, htselex_ppms
+len_cutoff_subseq(cutoff=0)
 
 
-attract_ppms, htselex_ppms = filter_motifs(attract_ppms, htselex_ppms, too_short)
-
-print(">>> DONE FILTERING MOTIFS FOR LENGTH")'''
 
 
 ###############################################################################################################################################
@@ -300,8 +285,8 @@ def get_randomized_sequence_list(transcript_dict, seq, seq_amount, seq_type_key,
 ###############################################################################################################################################
 # CREATE SEQUENCE FILES FROM TRANSCRIPTOME
 ###############################################################################################################################################
-def transcriptome_file(MANE_dict, shuffle=False, mode="transcriptome"):
-    subseqs = ["UTR3", "UTR5", "CDS", "cDNA"]
+def transcriptome_file(MANE_dict):
+    subseqs = ["UTR3", "UTR5", "CDS", "transcript"]
     experiments = ["RNAcompete", "SELEX", "HT-SELEX"]
     transcriptome_3utr = "fimo_transcriptome_3utr.txt"
     transcriptome_5utr = "fimo_transcriptome_5utr.txt"
@@ -312,16 +297,6 @@ def transcriptome_file(MANE_dict, shuffle=False, mode="transcriptome"):
                            transcriptome_5utr,
                            transcriptome_cds,
                            transcriptome_full]
-
-
-    # implement option to use randomly shuffled sequences in FIMO
-    if shuffle:
-        if mode == "transcriptome":
-            # get autologous sequences for shuffling function
-            ppms = {}
-            ppms["RNAcompete"] = attract_ppms["RNAcomp"]
-            ppms["SELEX"] = attract_ppms["SELEX"]
-            ppms["HT-SELEX"] = htselex_ppms
 
 
     dir = os.path.join(os.getcwd(),"DATA", "FIMO_input", "sequences")
