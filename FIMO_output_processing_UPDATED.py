@@ -14,27 +14,27 @@ from tqdm import tqdm
 #CHANGE THESE SETTINGS TO RUN DIFFERENT ANALYSES
 ###########################################################################
 pval_100 = False
-pval_1000 = False
-pval_10000 = True
+pval_1000 = True
+pval_10000 = False
 transcriptome_background = True
 individual_background = False
 ###########################################################################
 
 if pval_100:
-    diagram_title = "Enrichment of autologous binding via FIMO\nFull Transcriptome background of first order markov chain\nP-value cutoff: 1e-2"
+    diagram_title = "Enrichment of autologous binding via FIMO\nFull Transcriptome background\nP-value cutoff: 1e-2"
     data_path = os.path.join(os.getcwd(), "DATA", "FIMO_OUT", "background_transcriptome_pval1e-2")
 
 if pval_1000:
-    diagram_title = "Enrichment of autologous binding via FIMO\nFull Transcriptome background of first order markov chain\nP-value cutoff: 1e-3"
+    diagram_title = "Enrichment of autologous binding via FIMO\nFull Transcriptome background\nP-value cutoff: 1e-3"
     data_path = os.path.join(os.getcwd( ), "DATA", "FIMO_OUT", "background_transcriptome_pval1e-3")
 
 if pval_10000:
     if transcriptome_background:
-        diagram_title = "Enrichment of autologous binding via FIMO\nFull Transcriptome background of first order markov chain\nP-value cutoff: 1e-3"
+        diagram_title = "Enrichment of autologous binding via FIMO\nFull Transcriptome background\nP-value cutoff: 1e-3"
         data_path = os.path.join(os.getcwd( ), "DATA", "FIMO_OUT", "background_transcriptome_pval1e-4")
 
     if individual_background:
-        diagram_title = "Enrichment of autologous binding via FIMO\nIndividual transcript parts as background - 1st order markov chain\nP-value cutoff: 1e+4"
+        diagram_title = "Enrichment of autologous binding via FIMO\nIndividual transcript parts as background\nP-value cutoff: 1e-4"
         data_path = os.path.join(os.getcwd( ), "DATA", "FIMO_OUT", "background_individual_pval1e-4")
 
 
@@ -143,9 +143,12 @@ def pipeline_for_FIMO_analysis(matches_sorted_dict):
     global attract_ppms, htselex_ppms
     global diagram_title
 
+    SEED = 1234
+
     fig = plt.figure(figsize=[18.3 / 2.54, 11.0 / 2.54], constrained_layout=True, dpi=300)
     grid = fig.add_gridspec(1, 1)
     ax3 = plt.subplot(grid[0, 0])
+    ax3.set_title(diagram_title)
 
     # great outer loop for going through files
     for i, exp in enumerate(experiments):
@@ -170,10 +173,12 @@ def pipeline_for_FIMO_analysis(matches_sorted_dict):
             normalize_by_num_of_matrices = calc_coverages_autol_len(infos,
                                                                     subseq,
                                                                     duplicated_matrices,
+                                                                    SEED,
+                                                                    MANE_transcriptome,
                                                                     len_normalize=False,
                                                                     consider_overlap=False,
                                                                     background_longer_than_autol_only=False,
-                                                                    normalize_by_num_of_matrices=True)
+                                                                    normalize_by_num_of_matrices=False)
 
             autologous_all_motifs = []
             background_all_motifs = []
@@ -208,6 +213,7 @@ def pipeline_for_FIMO_analysis(matches_sorted_dict):
         print(">>> Z-SCORES HAVE BEEN CALCULATED\n")
         print(">>> PLOTTING THE DATA\n")
 
+    plt.grid()
     plt.show()
 
 
@@ -285,12 +291,17 @@ def group_by_motif_id_and_sequence_id(matches_by_motif, merge_duplicate_motifs=F
 def calc_coverages_autol_len(matches_by_subseq,
                              subseq,
                              duplicated_matrices,
+                             SEED,
+                             MANE_transcriptome,
                              len_normalize=False,
                              consider_overlap=False,
                              background_longer_than_autol_only=False,
                              normalize_by_num_of_matrices=False):
+    np.random.seed(SEED)
+    coverages = {}
 
     for motif in matches_by_subseq:
+        coverages[motif] = {}
 
         for seq in matches_by_subseq[motif].values(): #all the matches a motif has with a sequence
 
@@ -342,24 +353,30 @@ def calc_coverages_autol_len(matches_by_subseq,
                     continue
 
                 if normalize_by_num_of_matrices and len_normalize:
-                    num_of_duplicates = duplicated_matrices[motif]
+                    if motif in duplicated_matrices:
+                        num_of_duplicates = duplicated_matrices[motif]
+                    else:
+                        num_of_duplicates = 1
                     cov[2] = cov[2] / (num_of_duplicates * seq_len)
-                    matches_by_subseq[motif][seq_id] = cov
+                    coverages[motif][seq_id] = cov
                     continue
 
                 if normalize_by_num_of_matrices:
-                    num_of_duplicates = duplicated_matrices[motif]
+                    if motif in duplicated_matrices:
+                        num_of_duplicates = duplicated_matrices[motif]
+                    else:
+                        num_of_duplicates = 1
                     cov[2] = cov[2] / num_of_duplicates
-                    matches_by_subseq[motif][seq_id] = cov
+                    coverages[motif][seq_id] = cov
                     continue
 
                 if len_normalize:
                     cov[2] = cov[2] / seq_len
-                    matches_by_subseq[motif][seq_id] = cov
+                    coverages[motif][seq_id] = cov
                     continue
 
                 else:
-                    matches_by_subseq[motif][seq_id] = cov
+                    coverages[motif][seq_id] = cov
 
 
 
@@ -387,14 +404,34 @@ def calc_coverages_autol_len(matches_by_subseq,
 
                 cov = [seq_id, motif_id, np.mean(array), seq_len]
 
+                if normalize_by_num_of_matrices and len_normalize:
+                    if motif in duplicated_matrices:
+                        num_of_duplicates = duplicated_matrices[motif]
+                    else:
+                        num_of_duplicates = 1
+                    cov[2] = cov[2] / (num_of_duplicates * seq_len)
+                    coverages[motif][seq_id] = cov
+                    continue
+
+                if normalize_by_num_of_matrices:
+                    if motif in duplicated_matrices:
+                        num_of_duplicates = duplicated_matrices[motif]
+                    else:
+                        num_of_duplicates = 1
+                    cov[2] = cov[2] / num_of_duplicates
+                    coverages[motif][seq_id] = cov
+                    continue
+
                 if len_normalize:
                     cov[2] = cov[2] / seq_len
-                    matches_by_subseq[motif][seq_id] = cov
+                    coverages[motif][seq_id] = cov
+                    continue
+
                 else:
-                    matches_by_subseq[motif][seq_id] = cov
+                    coverages[motif][seq_id] = cov
 
 
-    return matches_by_subseq, len_normalize, consider_overlap, normalize_by_num_of_matrices
+    return coverages, len_normalize, consider_overlap, normalize_by_num_of_matrices
 # coverages = data; len_norm and consider_overlap are for specifying the mode of analysis during plotting;
 # ppms gives the number of matching motifs to the plot (N = )
     # coverages: holds motifs and the sequences each motif matched with. For every sequence, there's a coverage
@@ -427,7 +464,6 @@ def calc_z_scores(coverages_by_motif, mean_cov, std_cov):
 
 
     for info in coverages_by_motif.values():
- # variable to include motifs that had matches (at all) but not the autologous one
 
         seq_id = info[0]
         motif_id = info[1]
