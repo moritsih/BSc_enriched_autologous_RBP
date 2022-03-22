@@ -11,7 +11,7 @@ import os
 
 
 home = os.getcwd()
-data_path = (os.path.join("/home","amy","Moritz_BSc", "BSc_enriched_autologous_RBP", "DATA"))
+data_path = (os.path.join(home,"DATA"))
 
 ###################################################################################################
 # FUNCTIONS #######################################################################################
