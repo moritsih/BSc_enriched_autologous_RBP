@@ -14,8 +14,8 @@ from tqdm import tqdm
 #CHANGE THESE SETTINGS TO RUN DIFFERENT ANALYSES
 ###########################################################################
 pval_100 = False
-pval_1000 = True
-pval_10000 = False
+pval_1000 = False
+pval_10000 = True
 transcriptome_background = True
 individual_background = False
 ###########################################################################
@@ -23,20 +23,23 @@ individual_background = False
 if pval_100:
     diagram_title = "Enrichment of autologous binding via FIMO\nFull Transcriptome background\nP-value cutoff: 1e-2"
     data_path = os.path.join(os.getcwd(), "DATA", "FIMO_OUT", "background_transcriptome_pval1e-2")
+    figure_name = "background_transcriptome_pval1e-2"
 
 if pval_1000:
     diagram_title = "Enrichment of autologous binding via FIMO\nFull Transcriptome background\nP-value cutoff: 1e-3"
     data_path = os.path.join(os.getcwd( ), "DATA", "FIMO_OUT", "background_transcriptome_pval1e-3")
+    figure_name = "background_transcriptome_pval1e-3"
 
 if pval_10000:
     if transcriptome_background:
         diagram_title = "Enrichment of autologous binding via FIMO\nFull Transcriptome background\nP-value cutoff: 1e-3"
         data_path = os.path.join(os.getcwd( ), "DATA", "FIMO_OUT", "background_transcriptome_pval1e-4")
+        figure_name = "background_transcriptome_pval1e-4"
 
     if individual_background:
         diagram_title = "Enrichment of autologous binding via FIMO\nIndividual transcript parts as background\nP-value cutoff: 1e-4"
         data_path = os.path.join(os.getcwd( ), "DATA", "FIMO_OUT", "background_individual_pval1e-4")
-
+        figure_name = "background_individual_pval1e-4"
 
 directories = os.listdir(data_path)  # list of directiories containing output tsv files (& other files)
 
@@ -213,6 +216,8 @@ def pipeline_for_FIMO_analysis(matches_sorted_dict):
         print(">>> Z-SCORES HAVE BEEN CALCULATED\n")
         print(">>> PLOTTING THE DATA\n")
 
+
+    plt.savefig(figure_name)
     plt.grid()
     plt.show()
 
