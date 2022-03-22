@@ -22,6 +22,11 @@ transcriptome_background = True
 individual_background = False
 ###########################################################################
 
+if pval_cutoff == "5e-2":
+    diagram_title = "Enrichment of autologous binding via FIMO\nFull Transcriptome background\nP-value cutoff: 0.05"
+    data_path = os.path.join(os.getcwd( ), "DATA", "FIMO_OUT", "background_transcriptome_pval5e-2")
+    figure_name = "background_transcriptome_pval5e-2"
+
 if pval_100 or pval_cutoff == "1e-2":
     diagram_title = "Enrichment of autologous binding via FIMO\nFull Transcriptome background\nP-value cutoff: 1e-2"
     data_path = os.path.join(os.getcwd(), "DATA", "FIMO_OUT", "background_transcriptome_pval1e-2")
