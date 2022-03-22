@@ -237,12 +237,12 @@ def set_plotting_details():
     plt.rcParams["axes.facecolor"] = "white"
     plt.rcParams["font.family"] = "Calibri"
     plt.rcParams["lines.markersize"] = 4
-    plt.rc("font", size=size_tiny)          # controls default text sizes
+    plt.rc("font", size=size_small)          # controls default text sizes
     plt.rc("axes", titlesize=size_small)     # fontsize of the axes title
-    plt.rc("axes", labelsize=size_tiny)     # fontsize of the x and y labels
+    plt.rc("axes", labelsize=size_small)     # fontsize of the x and y labels
     plt.rc("xtick", labelsize=size_small)    # fontsize of the tick labels
     plt.rc("ytick", labelsize=size_small)    # fontsize of the tick labels
-    plt.rc("legend", fontsize=size_tiny)     # legend fontsize
+    plt.rc("legend", fontsize=size_small)     # legend fontsize
     plt.rc("figure", titlesize=size_big)     # fontsize of the figure title
     mpl.rcParams["legend.markerscale"] = 1.0
 
@@ -611,14 +611,14 @@ def plot_analysis_results(ax3, autologous, background, pvalue, ppms, i, l, subse
                     color=point_colors[l],
                     alpha=0.2,
                     zorder=3,
-                    label="autol.(z-score in resp. transcriptome)")
+                    label=f"autol. {subseq} (z-score in resp. transcriptome)")
 
 
         ax3.plot([i-0.25,i-0.05],
                  [np.mean(autologous)]*2,
                  color=point_colors[l],
                  zorder=2,
-                 label="(autologous)(mean)",
+                 label=f"(autologous) {subseq} (mean)",
                  alpha=0.4)
 
 
@@ -658,7 +658,7 @@ def plot_analysis_results(ax3, autologous, background, pvalue, ppms, i, l, subse
                  vys,
                  color=point_colors[l],
                  zorder=2,
-                 label="(merged histogram)",
+                 label=f"{subseq} (merged histogram)",
                  alpha=0.5,
                  linewidth=1)
 
