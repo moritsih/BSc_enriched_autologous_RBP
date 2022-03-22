@@ -17,7 +17,7 @@ from tqdm import tqdm
 pval_cutoff = sys.argv[1]
 pval_100 = False
 pval_1000 = False
-pval_10000 = False
+pval_10000 = True
 transcriptome_background = True
 individual_background = False
 ###########################################################################
@@ -34,7 +34,7 @@ if pval_1000 or pval_cutoff == "1e-3":
 
 if pval_10000 or pval_cutoff == "1e-4":
     if transcriptome_background:
-        diagram_title = "Enrichment of autologous binding via FIMO\nFull Transcriptome background\nP-value cutoff: 1e-3"
+        diagram_title = "Enrichment of autologous binding via FIMO\nFull Transcriptome background\nP-value cutoff: 1e-4"
         data_path = os.path.join(os.getcwd( ), "DATA", "FIMO_OUT", "background_transcriptome_pval1e-4")
         figure_name = "background_transcriptome_pval1e-4"
 
@@ -150,6 +150,8 @@ def pipeline_for_FIMO_analysis(matches_sorted_dict):
 
     SEED = 1234
 
+    set_plotting_details( )
+
     fig = plt.figure(figsize=[18.3 / 2.54, 11.0 / 2.54], constrained_layout=True, dpi=300)
     grid = fig.add_gridspec(1, 1)
     ax3 = plt.subplot(grid[0, 0])
@@ -215,7 +217,6 @@ def pipeline_for_FIMO_analysis(matches_sorted_dict):
         print(">>> DONE WITH COVERAGE CALCULATIONS\n")
         print(">>> Z-SCORES HAVE BEEN CALCULATED\n")
         print(">>> PLOTTING THE DATA\n")
-
 
 
     plt.grid()
@@ -602,7 +603,7 @@ def plot_analysis_results(ax3, autologous, background, pvalue, ppms, i, l, subse
     ##########################################################
     if i == 0:
 
-        set_plotting_details()
+
 
         ax3.scatter([i-autologous_points_horizontal_step[l]] * len(autologous),
                     autologous,
@@ -692,7 +693,7 @@ def plot_analysis_results(ax3, autologous, background, pvalue, ppms, i, l, subse
 
     ax3.text(i,
              p_value_position[l],
-             f"$p_{subseq}$ = {pvalue}",
+             f"$p-{subseq}$ = {pvalue}",
              ha="center",
              color=point_colors[l])
 
