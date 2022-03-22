@@ -67,7 +67,7 @@ def store_filenames_for_retrieval():
                 tsv_file_path = os.path.join(exp, file)
                 matches_files[dir] = tsv_file_path
 
-        #print(f">>> FETCHED MATCHES FROM {dir}\n")
+        print(f">>> FETCHED MATCHES FROM {dir}\n")
 
     return matches_files
 
@@ -89,7 +89,7 @@ def sort_matches(matches_unsorted):
                 if dir.startswith(exp_no) and dir.endswith(subseq_no):
                     matches_sorter[exp][subseq] = matches_unsorted[dir]
 
-        #print(f">>> {exp} IS IN RIGHT SHAPE NOW\n")
+        print(f">>> {exp} IS IN RIGHT SHAPE NOW\n")
 
     return matches_sorter
 
@@ -212,9 +212,9 @@ def pipeline_for_FIMO_analysis(matches_sorted_dict):
 
 
 
-        #print(">>> DONE WITH COVERAGE CALCULATIONS\n")
-        #print(">>> Z-SCORES HAVE BEEN CALCULATED\n")
-        #print(">>> PLOTTING THE DATA\n")
+        print(">>> DONE WITH COVERAGE CALCULATIONS\n")
+        print(">>> Z-SCORES HAVE BEEN CALCULATED\n")
+        print(">>> PLOTTING THE DATA\n")
 
 
     plt.savefig(figure_name)
