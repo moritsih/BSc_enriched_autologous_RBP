@@ -64,7 +64,7 @@ data_path = os.path.abspath("DATA")
 attract_ppms = extract_attract_ppm(os.path.join(data_path, "ATtRACT_ppm.txt"))
 htselex_ppms = extract_selex_ppm(os.path.join(data_path, "SELEX2020_ppm.txt"))
 
-print(">>> DONE EXTRACTING PPMS FROM ATTRACT AND HT-SELEX\n")
+#print(">>> DONE EXTRACTING PPMS FROM ATTRACT AND HT-SELEX\n")
 
 ###############################################################################################################################################
 # FUNCTION GETTING NESTED DICT FROM ATtRACT DATABSE:
@@ -144,10 +144,10 @@ RNAcomp_ppm_num = len(attract_ppms["RNAcomp"].keys())
 SELEX_ppm_num = len(attract_ppms["SELEX"].keys())
 htselex_ppm_num = len(htselex_ppms.keys())
 
-print(">>> DONE CREATING PPM DICTIONARIES FOR FURTHER PROCESSING\n")
-print(f">>> NUM OF ATTRACT RNAcomp MOTIFS (pre-filter): {RNAcomp_ppm_num}\n")
-print(f">>> NUM OF ATTRACT RNAcomp MOTIFS (pre-filter): {SELEX_ppm_num}\n")
-print(f">>> NUM OF HT-SELEX MOTIFS (pre-filter): {htselex_ppm_num}\n")
+#print(">>> DONE CREATING PPM DICTIONARIES FOR FURTHER PROCESSING\n")
+#print(f">>> NUM OF ATTRACT RNAcomp MOTIFS (pre-filter): {RNAcomp_ppm_num}\n")
+#print(f">>> NUM OF ATTRACT RNAcomp MOTIFS (pre-filter): {SELEX_ppm_num}\n")
+#print(f">>> NUM OF HT-SELEX MOTIFS (pre-filter): {htselex_ppm_num}\n")
 
 def plot_motif_length_distribution(list_of_motif_lengths):
     list_of_motif_lengths = sorted(list_of_motif_lengths)
@@ -179,7 +179,7 @@ for id, content in dict_MANE.items():
     for subseq in subseqs:
         MANE_transcriptome[id][subseq] = dict_MANE[id][subseq]
 
-print(">>> DONE SPLITTING MANE SEQUENCES INTO SUBSEQUENCES\n")
+#print(">>> DONE SPLITTING MANE SEQUENCES INTO SUBSEQUENCES\n")
 
 
 def rename_MANE_seqs_duplicated_motifs(MANE_transcriptome, rnacompete_ppms):
@@ -209,7 +209,7 @@ def len_cutoff_subseq(cutoff=20):
             if len(MANE_transcriptome[id][subseq]) <= cutoff:
                 MANE_transcriptome[id][subseq] = ""
 
-    print(">>> DONE FILTERING FOR SUBSEQUENCE LENGTH\n")
+    #print(">>> DONE FILTERING FOR SUBSEQUENCE LENGTH\n")
 
 len_cutoff_subseq(cutoff=0)
 
@@ -260,7 +260,7 @@ def get_randomized_sequence_list(transcript_dict, seq, seq_amount, seq_type_key,
             list_amount = random.sample(list_usable_seqs, seq_amount)
         else:
             list_amount = random.choices(list_usable_seqs, k=seq_amount)
-            print(f"\nNot enough background for a {seq_type_key}, used repetitions!\n")
+            #print(f"\nNot enough background for a {seq_type_key}, used repetitions!\n")
 
     # Create randomized background with length of sequence and amount of randomized sequences
     # given by user:
@@ -311,7 +311,7 @@ def transcriptome_file(MANE_dict):
 
 
 transcriptome_file(MANE_transcriptome)
-print(">>> DONE CREATING SEQUENCE FILES\n")
+#print(">>> DONE CREATING SEQUENCE FILES\n")
 
 
 ###############################################################################################################################################
@@ -380,7 +380,7 @@ fimo_motif_input(attract_ppms["RNAcomp"], attract=True, rnacomp=True)
 fimo_motif_input(attract_ppms["SELEX"], attract=True, rnacomp=False)
 fimo_motif_input(htselex_ppms, attract=False, rnacomp=False)
 
-print(">>> DONE CREATING MOTIF FILES\n")
+#print(">>> DONE CREATING MOTIF FILES\n")
 
 
 '''###############################################################################################################################################

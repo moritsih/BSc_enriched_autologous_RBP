@@ -89,7 +89,7 @@ def sort_matches(matches_unsorted):
                 if dir.startswith(exp_no) and dir.endswith(subseq_no):
                     matches_sorter[exp][subseq] = matches_unsorted[dir]
 
-        print(f">>> {exp} IS IN RIGHT SHAPE NOW\n")
+        #print(f">>> {exp} IS IN RIGHT SHAPE NOW\n")
 
     return matches_sorter
 
