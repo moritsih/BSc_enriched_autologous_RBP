@@ -17,7 +17,7 @@ from tqdm import tqdm
 pval_cutoff = sys.argv[1]
 pval_100 = False
 pval_1000 = False
-pval_10000 = True
+pval_10000 = False
 transcriptome_background = True
 individual_background = False
 ###########################################################################
@@ -233,17 +233,17 @@ def set_plotting_details():
     size_tiny = 3
     size_small = 5
     size_medium = 9
-    size_big = 10
+    size_big = 12
     plt.rcParams["axes.facecolor"] = "white"
     plt.rcParams["font.family"] = "Calibri"
     plt.rcParams["lines.markersize"] = 4
     plt.rc("font", size=size_tiny)          # controls default text sizes
-    plt.rc("axes", titlesize=size_tiny)     # fontsize of the axes title
+    plt.rc("axes", titlesize=size_small)     # fontsize of the axes title
     plt.rc("axes", labelsize=size_tiny)     # fontsize of the x and y labels
     plt.rc("xtick", labelsize=size_small)    # fontsize of the tick labels
     plt.rc("ytick", labelsize=size_small)    # fontsize of the tick labels
     plt.rc("legend", fontsize=size_tiny)     # legend fontsize
-    plt.rc("figure", titlesize=size_medium)     # fontsize of the figure title
+    plt.rc("figure", titlesize=size_big)     # fontsize of the figure title
     mpl.rcParams["legend.markerscale"] = 1.0
 
 
