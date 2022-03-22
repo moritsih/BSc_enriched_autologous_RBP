@@ -1,4 +1,5 @@
 import os
+import sys
 from matplotlib import pyplot as plt
 import numpy as np
 import matplotlib as mpl
@@ -13,24 +14,25 @@ from tqdm import tqdm
 ###########################################################################
 #CHANGE THESE SETTINGS TO RUN DIFFERENT ANALYSES
 ###########################################################################
-pval_100 = True
+pval_cutoff = sys.argv[1]
+pval_100 = False
 pval_1000 = False
 pval_10000 = False
 transcriptome_background = True
 individual_background = False
 ###########################################################################
 
-if pval_100:
+if pval_100 or pval_cutoff == "1e-2":
     diagram_title = "Enrichment of autologous binding via FIMO\nFull Transcriptome background\nP-value cutoff: 1e-2"
     data_path = os.path.join(os.getcwd(), "DATA", "FIMO_OUT", "background_transcriptome_pval1e-2")
     figure_name = "background_transcriptome_pval1e-2"
 
-if pval_1000:
+if pval_1000 or pval_cutoff == "1e-3":
     diagram_title = "Enrichment of autologous binding via FIMO\nFull Transcriptome background\nP-value cutoff: 1e-3"
     data_path = os.path.join(os.getcwd( ), "DATA", "FIMO_OUT", "background_transcriptome_pval1e-3")
     figure_name = "background_transcriptome_pval1e-3"
 
-if pval_10000:
+if pval_10000 or pval_cutoff == "1e-4":
     if transcriptome_background:
         diagram_title = "Enrichment of autologous binding via FIMO\nFull Transcriptome background\nP-value cutoff: 1e-3"
         data_path = os.path.join(os.getcwd( ), "DATA", "FIMO_OUT", "background_transcriptome_pval1e-4")
@@ -199,8 +201,6 @@ def pipeline_for_FIMO_analysis(matches_sorted_dict):
 
             number_of_motifs_used = count_amount_of_motifs_per_experiment(attract_ppms, htselex_ppms)
 
-            set_plotting_details()
-
             plot_analysis_results(ax3,
                                   autologous_all_motifs,
                                   background_all_motifs,
@@ -217,8 +217,9 @@ def pipeline_for_FIMO_analysis(matches_sorted_dict):
         print(">>> PLOTTING THE DATA\n")
 
 
-    plt.savefig(figure_name)
+
     plt.grid()
+    plt.savefig(figure_name)
     plt.show()
 
 
@@ -241,7 +242,7 @@ def set_plotting_details():
     plt.rc("xtick", labelsize=size_small)    # fontsize of the tick labels
     plt.rc("ytick", labelsize=size_small)    # fontsize of the tick labels
     plt.rc("legend", fontsize=size_tiny)     # legend fontsize
-    plt.rc("figure", titlesize=size_big)     # fontsize of the figure title
+    plt.rc("figure", titlesize=size_medium)     # fontsize of the figure title
     mpl.rcParams["legend.markerscale"] = 1.0
 
 
@@ -600,6 +601,8 @@ def plot_analysis_results(ax3, autologous, background, pvalue, ppms, i, l, subse
     # PLOT LEFT SIDE of individual diagrams (autologous part):
     ##########################################################
     if i == 0:
+
+        set_plotting_details()
 
         ax3.scatter([i-autologous_points_horizontal_step[l]] * len(autologous),
                     autologous,
