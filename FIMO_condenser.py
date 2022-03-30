@@ -170,7 +170,7 @@ def path_to_filename_converter(filepath):
         experiment = "SELEX.txt"
     elif filepath == f"{path}htselex_full.tsv":
         experiment = "HT-SELEX.txt"
-    "htselex_full.tsv"
+
     return experiment
 
 
