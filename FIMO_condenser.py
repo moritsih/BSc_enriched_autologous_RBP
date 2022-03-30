@@ -162,13 +162,13 @@ def get_matrix_length(matrix_id, ppms):
 def path_to_filename_converter(filepath):
 
     # had to hard-code this :(
-    path = "Z:\\BachelorsThesis\\BSc_enriched_autologous_RBP\\DATA\\FIMO_OUT\\pval1e-4\\"
+    filepath = f"Z:\\BachelorsThesis\\BSc_enriched_autologous_RBP\\DATA\\FIMO_OUT\\pval1e-4\\{filepath}"
 
-    if filepath == f"{path}rnacompete_full.tsv":
+    if filepath == filepath:
         experiment = "RNAcompete.txt"
-    elif filepath == f"{path}selex_full.tsv":
+    elif filepath == filepath:
         experiment = "SELEX.txt"
-    elif filepath == f"{path}htselex_full.tsv":
+    elif filepath == filepath:
         experiment = "HT-SELEX.txt"
 
     return experiment
