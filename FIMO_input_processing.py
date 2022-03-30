@@ -33,8 +33,9 @@ def extract_attract_ppm(attract_ppm):
 
 def extract_selex_ppm(selex_ppm, f_only_monomer=True):
     dict_htselex_ppms = {}
-
+    gene_ids_with_duplicates = []
     with open(selex_ppm, "r") as f:
+
         for line in f:
             line = line.rstrip("\n").split("\t")
 
@@ -49,12 +50,24 @@ def extract_selex_ppm(selex_ppm, f_only_monomer=True):
             dict_curr_PPM[counter] = [float(x) for x in line]
             counter += 1
             if counter == length:
+
                 if f_only_monomer and mer_status == "dimeric":
                     continue
+
                 elif gene_id not in dict_MANE:
                     continue
-                else:
+
+                elif gene_id in gene_ids_with_duplicates:
+                    counter_for_matrix_duplicates = gene_ids_with_duplicates.count(gene_id)
+                    gene_ids_with_duplicates.append(gene_id)
+                    gene_id = gene_id + "_" + str(counter_for_matrix_duplicates)
                     dict_htselex_ppms[gene_id] = dict_curr_PPM
+                    continue
+
+                else:
+                    gene_ids_with_duplicates.append(gene_id)
+                    dict_htselex_ppms[gene_id] = dict_curr_PPM
+
 
 
     return dict_htselex_ppms
@@ -75,11 +88,13 @@ print(">>> DONE EXTRACTING PPMS FROM ATTRACT AND HT-SELEX\n")
 ###############################################################################################################################################
 
 
-def read_db_attract(experiment_name, f_organism, f_experiment, f_score=True, f_mutated=False):
-    dict_attract_db = {}
-    data_path = os.path.abspath("DATA")
-    attract_path = os.path.join(os.path.join(data_path, "ATtRACT_db.txt"))
+def read_db_attract(f_organism, f_experiment, f_score=True, f_mutated=False):
 
+    dict_attract_db = {}
+
+    data_path = os.path.abspath("DATA")
+
+    attract_path = os.path.join(os.path.join(data_path, "ATtRACT_db.txt"))
     dict_ppms = extract_attract_ppm(os.path.join(data_path, "ATtRACT_ppm.txt"))
     gene_ids_with_duplicates = []
     with open(attract_path, "r") as dbfile:
@@ -88,12 +103,12 @@ def read_db_attract(experiment_name, f_organism, f_experiment, f_score=True, f_m
             line = line.split("\t")
 
             # Define database structure:
-            Gene_name = line[0]
+            #Gene_name = line[0]
             Gene_id = line[1]
             Mutated = line[2]
             Organism = line[3]
-            Motif = line[4]
-            # Len = line[5]
+            #Motif = line[4]
+            #Len = line[5]
             Experiment_description = line[6]
             Matrix_id = line[11]
             Score = line[12]
@@ -105,7 +120,7 @@ def read_db_attract(experiment_name, f_organism, f_experiment, f_score=True, f_m
             if f_experiment:
                 if Experiment_description != f_experiment:
                     continue
-            if f_score:
+            if f_score: # this filter is important for the inclusion of multiple matrices per protein;
                 if "**" not in Score:
                     continue
 
@@ -118,13 +133,24 @@ def read_db_attract(experiment_name, f_organism, f_experiment, f_score=True, f_m
             if Gene_id not in dict_MANE:
                 continue
 
-            if f_experiment == "RNAcompete":
-                if Gene_id in gene_ids_with_duplicates:
+            if Gene_id in gene_ids_with_duplicates:
+                if f_experiment == "RNAcompete": # RNAcompete entries only have 1 matrix/protein that has score with "**"
+                    # therefore all but 1 entry are filtered out, allowing for this way of including multiple matrices/protein
                     counter_for_matrix_duplicates = gene_ids_with_duplicates.count(Gene_id)
                     gene_ids_with_duplicates.append(Gene_id)
                     Gene_id = Gene_id+"_"+str(counter_for_matrix_duplicates)
                     dict_attract_db[Gene_id] = Matrix_id
                     continue
+
+                if f_experiment == "SELEX":
+                    if Matrix_id in dict_attract_db.values():
+                        continue
+                    else:
+                        counter_for_matrix_duplicates = gene_ids_with_duplicates.count(Gene_id)
+                        gene_ids_with_duplicates.append(Gene_id)
+                        Gene_id = Gene_id + "_" + str(counter_for_matrix_duplicates)
+                        dict_attract_db[Gene_id] = Matrix_id
+                        continue
 
             gene_ids_with_duplicates.append(Gene_id)
 
@@ -136,9 +162,12 @@ def read_db_attract(experiment_name, f_organism, f_experiment, f_score=True, f_m
 
     return attract_ppms
 
+
 attract_ppms = {}
-attract_ppms["RNAcomp"] = read_db_attract("RNAcompete", "Homo_sapiens", "RNAcompete", f_score=True, f_mutated=False)
-attract_ppms["SELEX"] = read_db_attract("SELEX", "Homo_sapiens", "SELEX", f_score=True, f_mutated=False)
+
+attract_ppms["RNAcomp"] = read_db_attract("Homo_sapiens", "RNAcompete", f_score=True, f_mutated=False)
+attract_ppms["SELEX"] = read_db_attract("Homo_sapiens", "SELEX", f_score=True, f_mutated=False)
+
 
 RNAcomp_ppm_num = len(attract_ppms["RNAcomp"].keys())
 SELEX_ppm_num = len(attract_ppms["SELEX"].keys())
@@ -146,7 +175,7 @@ htselex_ppm_num = len(htselex_ppms.keys())
 
 print(">>> DONE CREATING PPM DICTIONARIES FOR FURTHER PROCESSING\n")
 print(f">>> NUM OF ATTRACT RNAcomp MOTIFS (pre-filter): {RNAcomp_ppm_num}\n")
-print(f">>> NUM OF ATTRACT RNAcomp MOTIFS (pre-filter): {SELEX_ppm_num}\n")
+print(f">>> NUM OF ATTRACT SELEX MOTIFS (pre-filter): {SELEX_ppm_num}\n")
 print(f">>> NUM OF HT-SELEX MOTIFS (pre-filter): {htselex_ppm_num}\n")
 
 def plot_motif_length_distribution(list_of_motif_lengths):
@@ -182,8 +211,8 @@ for id, content in dict_MANE.items():
 print(">>> DONE SPLITTING MANE SEQUENCES INTO SUBSEQUENCES\n")
 
 
-def rename_MANE_seqs_duplicated_motifs(MANE_transcriptome, rnacompete_ppms):
-    for ppm in rnacompete_ppms:
+def rename_MANE_seqs_duplicated_motifs(MANE_transcriptome, ppms):
+    for ppm in ppms:
         if ppm not in MANE_transcriptome:
             ppm_name_without_extension = str(ppm)[:-2]
             MANE_transcriptome[ppm] = MANE_transcriptome[ppm_name_without_extension]
@@ -197,6 +226,9 @@ def rename_MANE_seqs_duplicated_motifs(MANE_transcriptome, rnacompete_ppms):
     return MANE_transcriptome
 
 MANE_transcriptome = rename_MANE_seqs_duplicated_motifs(MANE_transcriptome, attract_ppms["RNAcomp"])
+MANE_transcriptome = rename_MANE_seqs_duplicated_motifs(MANE_transcriptome, attract_ppms["SELEX"])
+MANE_transcriptome = rename_MANE_seqs_duplicated_motifs(MANE_transcriptome, htselex_ppms)
+
 
 ###############################################################################################################################################
 # FILTER UTRs AND CDS FOR EMPTY/SHORT SEQUENCES;
@@ -212,72 +244,6 @@ def len_cutoff_subseq(cutoff=20):
     print(">>> DONE FILTERING FOR SUBSEQUENCE LENGTH\n")
 
 len_cutoff_subseq(cutoff=0)
-
-
-
-
-###############################################################################################################################################
-# CREATE RANDOMLY SHUFFLED SEQUENCES FROM DINUCLEOTIDE FREQUENCIES
-###############################################################################################################################################
-
-def generate_random_di_nuc_seq(length):
-    di_data = ({
-    "A": [0.29964487076119456, 0.19291583797335501, 0.28081683230189497, 0.22662245896355537],
-    "C": [0.30514068401513184, 0.29142157085594184, 0.10437582930948616, 0.29906191581944036],
-    "G": [0.2738100837255303, 0.24900349340170375, 0.27287036424103384, 0.2043160586317321],
-    "U": [0.1787865306201401, 0.2254019334639803, 0.3002818262111331, 0.29552970970474646]},
-    [0.26366181575547193, 0.23828855841092605, 0.24192231774690498, 0.25612730808669704])
-
-    dep_P, starts = di_data
-    random_seq = []
-    for i in range(length):
-        if i == 0:
-            random_seq.append(np.random.choice(["A","C","G","U"], size=None, replace=True, p=starts))
-        else:
-            random_seq.append(np.random.choice(["A","C","G","U"], size=None, replace=True, p=dep_P[random_seq[-1]]))
-    return "".join(random_seq)
-
-
-
-###############################################################################################################################################
-# CREATE RANDOMLY SHUFFLED SEQUENCES IN DIFFERENT WAYS:
-# - BY SHUFFLING A MANE TRANSCRIPT
-# - BY SHUFFLING THE AUTOLOGOUS TRANSCRIPT
-# - BY GENERATING NEW RANDOM SEQUENCES VIA DINUCLEOTIDE FREQUENCIES
-###############################################################################################################################################
-
-def get_randomized_sequence_list(transcript_dict, seq, seq_amount, seq_type_key, shuffle_mode="transcriptome"):
-    # If transcriptome is used, get sequences from MANE with at least the length of the autologous
-    # sequence and save them in list:
-    if shuffle_mode == "transcriptome":
-        list_usable_seqs = []
-        for protein in transcript_dict.keys():
-            if len(transcript_dict[protein][seq_type_key]) >= len(seq):
-                list_usable_seqs.append(transcript_dict[protein][seq_type_key])
-
-        # Get random sequences from the list until defined amount is met:
-        if len(list_usable_seqs) >= seq_amount:
-            list_amount = random.sample(list_usable_seqs, seq_amount)
-        else:
-            list_amount = random.choices(list_usable_seqs, k=seq_amount)
-            print(f"\nNot enough background for a {seq_type_key}, used repetitions!\n")
-
-    # Create randomized background with length of sequence and amount of randomized sequences
-    # given by user:
-    randomized_sequences = []
-    for num in range(seq_amount):
-        # Shuffle input sequence to get random sequences:
-        if shuffle_mode == "autologous":
-            random_seq = "".join([str(i) for i in random.sample(seq, len(seq))])
-        # Use transcriptome di-nucleotide frequencies for random sequences:
-        elif shuffle_mode == "di-nuc":
-            random_seq = generate_random_di_nuc_seq(len(seq))
-        elif shuffle_mode == "transcriptome":
-            random_seq = "".join([str(i) for i in random.sample(list_amount[num], len(seq))])
-        randomized_sequences.append(random_seq)
-
-    return randomized_sequences
-
 
 
 
@@ -304,9 +270,9 @@ def transcriptome_file(MANE_dict):
 
     for i in range(len(transcriptome_files)):
         with open(os.path.join(dir, transcriptome_files[i]), "w") as f:
-            for id in MANE_dict.keys():
+            for id in [x for x in MANE_dict.keys() if "_" not in x]:
                 seq = MANE_dict[id][subseqs[i]]
-                f.write(">" + id + " " + "transcriptome_" + subseqs[i] + "\n" + seq + "\n\n")
+                f.write(">" + id + " " + subseqs[i] + "\n" + seq + "\n\n")
 
 
 
