@@ -14,41 +14,35 @@ from tqdm import tqdm
 ###########################################################################
 #CHANGE THESE SETTINGS TO RUN DIFFERENT ANALYSES
 ###########################################################################
-pval_cutoff = sys.argv[1]
+pval_cutoff = None#sys.argv[1]
 pval_100 = False
 pval_1000 = False
-pval_10000 = False
-transcriptome_background = True
-individual_background = False
+pval_10000 = True
 ###########################################################################
 
 if pval_cutoff == "5e-2":
     diagram_title = "Enrichment of autologous binding via FIMO\nFull Transcriptome background\nP-value cutoff: 0.05"
-    data_path = os.path.join(os.getcwd( ), "DATA", "FIMO_OUT", "background_transcriptome_pval5e-2")
+    data_path = os.path.join(os.getcwd( ), "DATA", "FIMO_OUT", "pval5e-2")
     figure_name = "background_transcriptome_pval5e-2"
+
 
 if pval_100 or pval_cutoff == "1e-2":
     diagram_title = "Enrichment of autologous binding via FIMO\nFull Transcriptome background\nP-value cutoff: 1e-2"
-    data_path = os.path.join(os.getcwd(), "DATA", "FIMO_OUT", "background_transcriptome_pval1e-2")
+    data_path = os.path.join(os.getcwd(), "DATA", "FIMO_OUT", "pval1e-2")
     figure_name = "background_transcriptome_pval1e-2"
 
 if pval_1000 or pval_cutoff == "1e-3":
     diagram_title = "Enrichment of autologous binding via FIMO\nFull Transcriptome background\nP-value cutoff: 1e-3"
-    data_path = os.path.join(os.getcwd( ), "DATA", "FIMO_OUT", "background_transcriptome_pval1e-3")
+    data_path = os.path.join(os.getcwd( ), "DATA", "FIMO_OUT", "pval1e-3")
     figure_name = "background_transcriptome_pval1e-3"
 
 if pval_10000 or pval_cutoff == "1e-4":
-    if transcriptome_background:
-        diagram_title = "Enrichment of autologous binding via FIMO\nFull Transcriptome background\nP-value cutoff: 1e-4"
-        data_path = os.path.join(os.getcwd( ), "DATA", "FIMO_OUT", "background_transcriptome_pval1e-4")
-        figure_name = "background_transcriptome_pval1e-4"
+    diagram_title = "Enrichment of autologous binding via FIMO\nFull Transcriptome background\nP-value cutoff: 1e-4"
+    data_path = os.path.join(os.getcwd( ), "DATA", "FIMO_OUT", "pval1e-4")
+    figure_name = "background_transcriptome_pval1e-4"
 
-    if individual_background:
-        diagram_title = "Enrichment of autologous binding via FIMO\nIndividual transcript parts as background\nP-value cutoff: 1e-4"
-        data_path = os.path.join(os.getcwd( ), "DATA", "FIMO_OUT", "background_individual_pval1e-4")
-        figure_name = "background_individual_pval1e-4"
-
-directories = os.listdir(data_path)  # list of directiories containing output tsv files (& other files)
+files = os.listdir(data_path)  # list of directiories containing output tsv files (& other files)
+plot_target_path = os.path.join(os.getcwd( ), "DATA", "result_plots")
 
 # used for loop
 experiments = ["RNAcompete", "SELEX", "HT-SELEX"]
@@ -61,24 +55,19 @@ htselex_ppms = list(htselex_ppms.keys( ))
 rbps = [rnacompete_ppms, selex_ppms, htselex_ppms]
 
 # stores access to folders where the FIMO-output data lies; for retrieval inside loop
-def store_filenames_for_retrieval():
-    global data_path
-    global directories
+def store_filenames_for_retrieval(data_path, files):
 
     matches_files = {}
 
-    for dir in directories:  # loop through folders of different experiment/subsequence combinations
-        exp = os.path.join(data_path, dir)  # define which experiment we're dealing with
-        for file in os.listdir(exp):
-            if ".tsv" in file:  # there are other types of files in the dir
-                tsv_file_path = os.path.join(exp, file)
-                matches_files[dir] = tsv_file_path
+    for file in files:  # loop through files with different experiment/subsequence combinations
+        tsv_file_path = os.path.join(data_path, file)
+        matches_files[file] = tsv_file_path
 
-        print(f">>> FETCHED MATCHES FROM {dir}\n")
+        print(f">>> FETCHED MATCHES FROM {file}\n")
 
     return matches_files
 
-matches_raw = store_filenames_for_retrieval( )
+matches_raw = store_filenames_for_retrieval(data_path, files)
 
 
 def sort_matches(matches_unsorted):
@@ -92,9 +81,10 @@ def sort_matches(matches_unsorted):
 
         for subseq_no, subseq in sorter_subseq.items( ):
 
-            for dir in directories:
-                if dir.startswith(exp_no) and dir.endswith(subseq_no):
-                    matches_sorter[exp][subseq] = matches_unsorted[dir]
+            for file in files:
+                name = str(file)[:-4]
+                if name.startswith(exp_no) and name.endswith(subseq_no):
+                    matches_sorter[exp][subseq] = matches_unsorted[file]
 
         print(f">>> {exp} IS IN RIGHT SHAPE NOW\n")
 
@@ -152,6 +142,7 @@ def pipeline_for_FIMO_analysis(matches_sorted_dict):
     global subsequences
     global attract_ppms, htselex_ppms
     global diagram_title
+    global plot_target_path
 
     SEED = 1234
 
@@ -218,14 +209,8 @@ def pipeline_for_FIMO_analysis(matches_sorted_dict):
                                   subseq)
 
 
-
-        print(">>> DONE WITH COVERAGE CALCULATIONS\n")
-        print(">>> Z-SCORES HAVE BEEN CALCULATED\n")
-        print(">>> PLOTTING THE DATA\n")
-
-
     plt.grid()
-    plt.savefig(figure_name)
+    plt.savefig(os.path.join(plot_target_path,figure_name))
     plt.show()
 
 
