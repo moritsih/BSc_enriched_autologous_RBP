@@ -6,7 +6,7 @@ from FIMO_input_processing import attract_ppms, htselex_ppms
 ppms = [attract_ppms["RNAcomp"], attract_ppms["SELEX"], htselex_ppms]
 
 # this script requires 1 commandline argument; for ex. enter "python3 FIMO_condenser.py pval1e-4"
-pval_cutoff = "1e-4" #sys.argv[1]
+pval_cutoff = sys.argv[1]
 
 if pval_cutoff == "5e-2":
     data_path = os.path.join(os.getcwd( ), "DATA", "FIMO_OUT", "pval5e-2")
