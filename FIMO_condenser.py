@@ -183,6 +183,8 @@ def path_to_filename_converter(filepath):
         exp = "SELEX.txt"
     elif filepath.endswith("\\htselex_full.tsv"):
         exp = "HT-SELEX.txt"
+    else:
+        exp = None
 
     return exp
 
