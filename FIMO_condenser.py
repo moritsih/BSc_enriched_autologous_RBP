@@ -178,11 +178,13 @@ def get_matrix_length(matrix_id, ppms):
 def path_to_filename_converter(filepath):
 
     if filepath.endswith("\\rnacompete_full.tsv"):
-        return "RNAcompete.txt"
+        exp = "RNAcompete.txt"
     elif filepath.endswith("\\selex_full.tsv"):
-        return "SELEX.txt"
+        exp = "SELEX.txt"
     elif filepath.endswith("\\htselex_full.tsv"):
-        return "HT-SELEX.txt"
+        exp = "HT-SELEX.txt"
+
+    return exp
 
 
 
