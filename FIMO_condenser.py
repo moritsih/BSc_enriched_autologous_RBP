@@ -1,10 +1,26 @@
 import os
+import sys
 from additional_code.read_MANE import dict_MANE
 from FIMO_input_processing import attract_ppms, htselex_ppms
 
 ppms = [attract_ppms["RNAcomp"], attract_ppms["SELEX"], htselex_ppms]
 
-data_path = os.path.join(os.getcwd( ), "DATA", "FIMO_OUT", "pval1e-4")
+# this script requires 1 commandline argument; for ex. enter "python3 FIMO_condenser.py pval1e-4"
+pval_cutoff = "1e-4" #sys.argv[1]
+
+if pval_cutoff == "5e-2":
+    data_path = os.path.join(os.getcwd( ), "DATA", "FIMO_OUT", "pval5e-2")
+
+if pval_cutoff == "1e-2":
+    data_path = os.path.join(os.getcwd(), "DATA", "FIMO_OUT", "pval1e-2")
+
+if pval_cutoff == "1e-3":
+    data_path = os.path.join(os.getcwd( ), "DATA", "FIMO_OUT", "pval1e-3")
+
+if pval_cutoff == "1e-4":
+    data_path = os.path.join(os.getcwd( ), "DATA", "FIMO_OUT", "pval1e-4")
+
+
 files = [x for x in os.listdir(data_path) if "full" in x]
 target_location_file = os.path.join(os.getcwd(), "DATA", "condensed_files")
 
@@ -161,14 +177,11 @@ def get_matrix_length(matrix_id, ppms):
 
 def path_to_filename_converter(filepath):
 
-    # had to hard-code this :(
-    filepath = f"Z:\\BachelorsThesis\\BSc_enriched_autologous_RBP\\DATA\\FIMO_OUT\\pval1e-4\\{filepath}"
-
-    if filepath == filepath:
+    if filepath.endswith("\\rnacompete_full.tsv"):
         experiment = "RNAcompete.txt"
-    elif filepath == filepath:
+    elif filepath.endswith("\\selex_full.tsv"):
         experiment = "SELEX.txt"
-    elif filepath == filepath:
+    elif filepath.endswith("\\htselex_full.tsv"):
         experiment = "HT-SELEX.txt"
 
     return experiment
