@@ -14,10 +14,10 @@ from tqdm import tqdm
 ###########################################################################
 #CHANGE THESE SETTINGS TO RUN DIFFERENT ANALYSES
 ###########################################################################
-pval_cutoff = None#sys.argv[1]
+pval_cutoff = sys.argv[1]
 pval_100 = False
 pval_1000 = False
-pval_10000 = True
+pval_10000 = False
 ###########################################################################
 
 if pval_cutoff == "5e-2":
