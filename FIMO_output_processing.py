@@ -86,7 +86,7 @@ def sort_matches(matches_unsorted):
                 if name.startswith(exp_no) and name.endswith(subseq_no):
                     matches_sorter[exp][subseq] = matches_unsorted[file]
 
-        print(f">>> {exp} IS IN RIGHT SHAPE NOW\n")
+        #print(f">>> {exp} IS IN RIGHT SHAPE NOW\n")
 
     return matches_sorter
 
@@ -294,6 +294,7 @@ def calc_coverages_autol_len(matches_by_subseq,
                              consider_overlap=False,
                              background_longer_than_autol_only=False,
                              normalize_by_num_of_matrices=False):
+
     np.random.seed(SEED)
     coverages = {}
 
