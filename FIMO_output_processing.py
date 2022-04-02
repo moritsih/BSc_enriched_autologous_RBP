@@ -14,10 +14,10 @@ from tqdm import tqdm
 ###########################################################################
 #CHANGE THESE SETTINGS TO RUN DIFFERENT ANALYSES
 ###########################################################################
-pval_cutoff = sys.argv[1]
+pval_cutoff = None#sys.argv[1]
 pval_100 = False
 pval_1000 = False
-pval_10000 = False
+pval_10000 = True
 ###########################################################################
 
 if pval_cutoff == "5e-2":
@@ -167,6 +167,8 @@ def pipeline_for_FIMO_analysis(matches_sorted_dict):
 
             infos, duplicated_matrices = group_by_motif_id_and_sequence_id(infos)
 
+            print(f"grouping by motif and sequence is not the problem for {exp} - {subseq}")
+
             #with tqdm(total=set_tqdm_counter_total()) as pbar:
             #    pbar.update(1)
 
@@ -182,6 +184,8 @@ def pipeline_for_FIMO_analysis(matches_sorted_dict):
                                                                     consider_overlap=False,
                                                                     background_longer_than_autol_only=False,
                                                                     normalize_by_num_of_matrices=False)
+
+            print(f"coverage is not the problem for {exp} - {subseq}")
 
             autologous_all_motifs = []
             background_all_motifs = []
