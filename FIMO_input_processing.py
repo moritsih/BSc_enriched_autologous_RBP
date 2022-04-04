@@ -191,6 +191,29 @@ def plot_motif_length_distribution(list_of_motif_lengths):
 
 #plot_motif_length_distribution(array)
 
+def plot_num_of_motifs_per_protein(ppms):
+    from collections import Counter
+    fig, ax = plt.subplots(1,3, figsize=(18,5))
+    for i, ppm in enumerate(ppms):
+
+        motif_list = []
+        for motif in ppm.keys():
+            if "_" in motif:
+                motif = str(motif)[:-2]
+            motif_list.append(motif)
+
+        matrices_per_motif = Counter(motif_list)
+
+        matrices = matrices_per_motif.keys()
+        count = matrices_per_motif.values()
+
+
+        ax[i].hist(count, matrices)
+
+    plt.show()
+
+#plot_num_of_motifs_per_protein([attract_ppms["RNAcomp"], attract_ppms["SELEX"], htselex_ppms])
+
 
 
 

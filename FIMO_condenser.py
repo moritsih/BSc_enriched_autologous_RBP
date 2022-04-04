@@ -171,7 +171,6 @@ def MANE_database_information_retriever(seq_id, matrix_id, dict_MANE):
 
 
 def get_matrix_length(matrix_id, ppms):
-
     return len(ppms[matrix_id])
 
 
