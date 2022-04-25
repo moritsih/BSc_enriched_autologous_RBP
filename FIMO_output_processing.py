@@ -13,10 +13,10 @@ from tqdm import tqdm
 ###########################################################################
 #CHANGE THESE SETTINGS TO RUN DIFFERENT ANALYSES
 ###########################################################################
-pval_cutoff = None#sys.argv[1]
+pval_cutoff = sys.argv[1]
 pval_100 = False
 pval_1000 = False
-pval_10000 = True
+pval_10000 = False
 ###########################################################################
 
 if pval_cutoff == "5e-2":
@@ -155,8 +155,11 @@ def pipeline_for_FIMO_analysis(matches_sorted_dict):
     # great outer loop for going through files
     for i, exp in enumerate(experiments):
 
+        print(f">>> STARTING ON {exp} ...")
+
         for l, subseq in enumerate(subsequences):
 
+            print(f">>> >>> STEPPING INTO {subseq} ...")
 
             tsv_file_path = matches_sorted[exp][subseq]
 
@@ -164,28 +167,34 @@ def pipeline_for_FIMO_analysis(matches_sorted_dict):
 
             add_sequence_length_to_infos(infos, subseq)
 
+
+            print(">>> DATA IS BEING SORTED ...")
             infos, duplicated_matrices = group_by_motif_id_and_sequence_id(infos)
 
             print(f"grouping by motif and sequence is not the problem for {exp} - {subseq}")
 
+
+            print(">>> WORKING ON COVERAGE CALCULATIONS ...")
             infos, \
             len_normalize, \
             consider_overlap, \
             normalize_by_num_of_matrices = calc_coverages(infos,
-                                                                    subseq,
-                                                                    duplicated_matrices,
-                                                                    SEED,
-                                                                    MANE_transcriptome,
-                                                                    len_normalize=False,
-                                                                    consider_overlap=False,
-                                                                    background_longer_than_autol_only=False,
-                                                                    normalize_by_num_of_matrices=False)
+                                                            subseq,
+                                                            duplicated_matrices,
+                                                            SEED,
+                                                            MANE_transcriptome,
+                                                            len_normalize=False,
+                                                            consider_overlap=False,
+                                                            background_longer_than_autol_only=False,
+                                                            normalize_by_num_of_matrices=False)
 
             print(f"coverage is not the problem for {exp} - {subseq}")
 
             autologous_all_motifs = []
             background_all_motifs = []
 
+
+            print(">>> MEAN+STDS ARE BEING CALCULATED AND Z-SCORES ARE BEING COMPUTED ...")
             for motif in infos.keys():
                 mean_cov_per_motif, std_cov_per_motif = get_mean_std(infos[motif])
                 autologous, background = calc_z_scores(infos[motif],
@@ -197,10 +206,13 @@ def pipeline_for_FIMO_analysis(matches_sorted_dict):
 
             print(f"mean/std are not the problem for {exp} - {subseq}")
 
+
+            print(">>> P-VALUES ARE BEING CALCULATED ...")
             p_val = binary_vs_averaged(autologous_all_motifs, background_all_motifs, ranked="no", side="higher")
 
             number_of_motifs_used = count_amount_of_matrices_per_experiment(attract_ppms, htselex_ppms)
 
+            print(">>> PUTTING INTO PLOT ...")
             plot_analysis_results(ax3,
                                   autologous_all_motifs,
                                   background_all_motifs,
@@ -562,7 +574,7 @@ def binary_vs_averaged(bi_ls, bi_ls_ls, ranked="no", side="higher"):
 # are calculated. The plot is then shown on screen.
 def plot_analysis_results(ax3, autologous, background, pvalue, ppms, i, l, subseq):
 
-    # As different subsequences need slighly different settings, I use "l" to go through these lists
+    # As different subsequences need slighly different settings, I use "l" to index the list positions
     autologous_points_horizontal_step = [0.05, 0.1, 0.15, 0.2]
     point_colors = ["red", "orange", "lightblue", "blue"]
     p_value_position = [-7, -7.5, -8, -8.5]
@@ -572,8 +584,6 @@ def plot_analysis_results(ax3, autologous, background, pvalue, ppms, i, l, subse
     # PLOT LEFT SIDE of individual diagrams (autologous part):
     ##########################################################
     if i == 0:
-
-
 
         ax3.scatter([i-autologous_points_horizontal_step[l]] * len(autologous),
                     autologous,

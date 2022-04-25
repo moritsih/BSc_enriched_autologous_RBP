@@ -69,13 +69,16 @@ def create_condensed_file_from_raw_matches(dict_MANE, data_path, files, ppms, ta
 def write_header_per_motif_seq_pair(dict_MANE, f, matches_per_sequence, ppm):
     seq_id = matches_per_sequence[0][0]
     matrix_id = matches_per_sequence[0][1]
+
     protein_gene_name, \
     transcript_gene_name, \
     transcript_id, \
     utr5_len, \
     cds_len, \
     utr3_len = MANE_database_information_retriever(seq_id, matrix_id, dict_MANE)
+
     matrix_len = get_matrix_length(matrix_id, ppm)
+
     f.write(f"{protein_gene_name}\t"
             f"{matrix_id}\t"
             f"{matrix_len}\t"
