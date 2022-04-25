@@ -275,7 +275,6 @@ def group_by_motif_id_and_sequence_id(matches_by_motif, merge_duplicate_motifs=F
     duplicated_matrices = {}
 
     for match in matches_by_motif:
-        duplication_counter = 1 # counts amount of different matrices per motif (if there are duplicates)
         seq_id = match[0]
         motif_id = match[1]
         if merge_duplicate_motifs: # Some RNAcompete RBPs had multiple matrices; Merge matches to 1 or keep separate?
