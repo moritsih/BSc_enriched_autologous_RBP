@@ -9,6 +9,7 @@ MANE_transcriptome = MANE_transcriptome
 from additional_code.load_histograms import vertical_hist
 import seaborn as sns
 from tqdm import tqdm
+import sys
 
 ###########################################################################
 #CHANGE THESE SETTINGS TO RUN DIFFERENT ANALYSES
@@ -61,8 +62,6 @@ def store_filenames_for_retrieval(data_path, files):
     for file in files:  # loop through files with different experiment/subsequence combinations
         tsv_file_path = os.path.join(data_path, file)
         matches_files[file] = tsv_file_path
-
-        print(f">>> FETCHED MATCHES FROM {file}\n")
 
     return matches_files
 
@@ -154,25 +153,23 @@ def pipeline_for_FIMO_analysis(matches_sorted_dict):
 
     # great outer loop for going through files
     for i, exp in enumerate(experiments):
-
-        print(f">>> STARTING ON {exp} ...")
+        print(f"STARTING ON {exp} ...")
 
         for l, subseq in enumerate(subsequences):
-
-            print(f">>> >>> STEPPING INTO {subseq} ...")
+            print(f">>> STEPPING INTO {subseq} ...")
 
             tsv_file_path = matches_sorted[exp][subseq]
 
+            print(">>> EXTRACTING MATCHES FROM FILES ...")
             infos = read_tsv_file(tsv_file_path)
 
+            print(">>> ADDING SEQUENCE LENGTHS TO MATCHES")
             add_sequence_length_to_infos(infos, subseq)
-
 
             print(">>> DATA IS BEING SORTED ...")
             infos, duplicated_matrices = group_by_motif_id_and_sequence_id(infos)
 
             print(f"grouping by motif and sequence is not the problem for {exp} - {subseq}")
-
 
             print(">>> WORKING ON COVERAGE CALCULATIONS ...")
             infos, \
