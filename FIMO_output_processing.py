@@ -9,6 +9,7 @@ MANE_transcriptome = MANE_transcriptome
 from additional_code.load_histograms import vertical_hist
 import seaborn as sns
 from tqdm import tqdm
+import sys
 
 ###########################################################################
 #CHANGE THESE SETTINGS TO RUN DIFFERENT ANALYSES
