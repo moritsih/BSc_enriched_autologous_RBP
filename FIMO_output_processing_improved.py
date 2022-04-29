@@ -14,7 +14,7 @@ from tqdm import tqdm
 ###########################################################################
 #CHANGE THESE SETTINGS TO RUN DIFFERENT ANALYSES
 ###########################################################################
-pval_cutoff = sys.argv[1]
+pval_cutoff = "1e-4"#sys.argv[1]
 pval_100 = False
 pval_1000 = False
 pval_10000 = False
@@ -96,20 +96,13 @@ matches_sorted = sort_matches(matches_raw)
 def read_tsv_file(tsv_file_path):
     with open(tsv_file_path, "r") as f:
         _ = f.readline()
-        content = f.readlines().split("\n")
+        content = f.read().split("\n")
         content = [x for x in content if x and not x.startswith("#")]  # removing bottom lines
         num_of_lines = len(content)
 
         return content, num_of_lines
 
-def read_tsv_file(tsv_file_path):
-    with open(tsv_file_path, "r") as f:
-        _ = f.readline()
-        content = f.readlines().split("\n")
-        content = [x for x in content if not x and x.startswith("#")]  # removing bottom lines
-        num_of_lines = len(content)
 
-    return content, num_of_lines
 
 def generate_info_generator(content):
     for line in content:
@@ -182,11 +175,14 @@ def pipeline_for_FIMO_analysis(matches_sorted_dict):
             infos_grouped_by_motifs_and_seqs = {}
 
             print(">>> DATA IS BEING SORTED ...")
-            for infos in tqdm(info_generator, total=num_of_lines):
+            for idx, infos in tqdm(enumerate(info_generator), total=num_of_lines):
 
                 add_sequence_length_to_infos(infos, subseq, MANE_transcriptome)
 
                 duplicated_matrices = group_by_motif_id_and_sequence_id(infos, infos_grouped_by_motifs_and_seqs)
+
+                if idx % 10000 == 0:
+                    print("Dict size:"+str(sys.getsizeof(infos_grouped_by_motifs_and_seqs)))
 
             print(f"grouping by motif and sequence is not the problem for {exp} - {subseq}")
 
