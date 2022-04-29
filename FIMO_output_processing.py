@@ -290,6 +290,7 @@ def group_by_motif_id_and_sequence_id(matches_by_motif, merge_duplicate_motifs=F
             motif_subseq[motif_id][seq_id] = []
 
         motif_subseq[motif_id][seq_id].append(match)
+
     return motif_subseq, duplicated_matrices
 
 

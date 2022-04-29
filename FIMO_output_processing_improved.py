@@ -14,7 +14,7 @@ from tqdm import tqdm
 ###########################################################################
 #CHANGE THESE SETTINGS TO RUN DIFFERENT ANALYSES
 ###########################################################################
-pval_cutoff = sys.argv[1]
+pval_cutoff = "1e-4"#sys.argv[1]
 pval_100 = False
 pval_1000 = False
 pval_10000 = False
@@ -104,7 +104,7 @@ def read_tsv_file(tsv_file_path):
 
 
 
-def info_generator(content):
+def generate_info_generator(content):
     for line in content:
         line = line.split("\t")
         motif_id = line[0]
@@ -118,13 +118,10 @@ def info_generator(content):
 
 
 def plot_num_matches(match_dict):
-    global individual_background, transcriptome_background
+
 
     fig, axes = plt.subplots(1, 3, figsize=(18, 5))
-    if individual_background:
-        fig.suptitle("Number of matches - background distributions by subsequences")
-    if transcriptome_background:
-        fig.suptitle("Number of matches - transcriptome background distribution")
+    fig.suptitle("Number of matches - transcriptome background distribution")
 
     for i, exp in enumerate(matches_sorted.keys( )):
         subseq_matches = []
@@ -153,47 +150,59 @@ def pipeline_for_FIMO_analysis(matches_sorted_dict):
 
     SEED = 1234
 
-    set_plotting_details( )
-
     fig = plt.figure(figsize=[18.3 / 2.54, 11.0 / 2.54], constrained_layout=True, dpi=300)
     grid = fig.add_gridspec(1, 1)
     ax3 = plt.subplot(grid[0, 0])
     ax3.set_title(diagram_title)
 
+    set_plotting_details( )
+
     # great outer loop for going through files
     for i, exp in enumerate(experiments):
+        print(f"STARTING ON {exp} ...")
 
         for l, subseq in enumerate(subsequences):
+            print(f">>> STEPPING INTO {subseq} ...")
 
             tsv_file_path = matches_sorted[exp][subseq]
 
-            content, num_of_lines = read_tsv_file(tsv_file_path)
+            print(">>> EXTRACTING MATCHES FROM FILES ...")
 
-            info_generator = info_generator(content)
+            file_content, num_of_lines = read_tsv_file(tsv_file_path)
 
+            info_generator = generate_info_generator(file_content)
+
+            infos_grouped_by_motifs_and_seqs = {}
+
+            print(">>> DATA IS BEING SORTED ...")
             for infos in tqdm(info_generator, total=num_of_lines):
 
                 add_sequence_length_to_infos(infos, subseq, MANE_transcriptome)
 
-                infos, duplicated_matrices = group_by_motif_id_and_sequence_id(infos)
+                duplicated_matrices = group_by_motif_id_and_sequence_id(infos, infos_grouped_by_motifs_and_seqs)
 
+            print(f"grouping by motif and sequence is not the problem for {exp} - {subseq}")
 
-                infos, \
-                len_normalize, \
-                consider_overlap, \
-                normalize_by_num_of_matrices = calc_coverages_autol_len(infos,
-                                                                        subseq,
-                                                                        duplicated_matrices,
-                                                                        SEED,
-                                                                        MANE_transcriptome,
-                                                                        len_normalize=False,
-                                                                        consider_overlap=False,
-                                                                        background_longer_than_autol_only=False,
-                                                                        normalize_by_num_of_matrices=False)
+            print(">>> WORKING ON COVERAGE CALCULATIONS ...")
+            infos, \
+            len_normalize, \
+            consider_overlap, \
+            normalize_by_num_of_matrices = calc_coverages(infos_grouped_by_motifs_and_seqs,
+                                                          subseq,
+                                                          duplicated_matrices,
+                                                          SEED,
+                                                          MANE_transcriptome,
+                                                          len_normalize=False,
+                                                          consider_overlap=False,
+                                                          background_longer_than_autol_only=False,
+                                                          normalize_by_num_of_matrices=False)
+
+            print(f"coverage is not the problem for {exp} - {subseq}")
 
             autologous_all_motifs = []
             background_all_motifs = []
 
+            print(">>> MEAN+STDS ARE BEING CALCULATED AND Z-SCORES ARE BEING COMPUTED ...")
             for motif in infos.keys():
                 mean_cov_per_motif, std_cov_per_motif = get_mean_std(infos[motif])
                 autologous, background = calc_z_scores(infos[motif],
@@ -203,10 +212,14 @@ def pipeline_for_FIMO_analysis(matches_sorted_dict):
                 autologous_all_motifs.append(autologous)
                 background_all_motifs.append(background)
 
+            print(f"mean/std are not the problem for {exp} - {subseq}")
+
+            print(">>> P-VALUES ARE BEING CALCULATED ...")
             p_val = binary_vs_averaged(autologous_all_motifs, background_all_motifs, ranked="no", side="higher")
 
             number_of_motifs_used = count_amount_of_motifs_per_experiment(attract_ppms, htselex_ppms)
 
+            print(">>> PUTTING INTO PLOT ...")
             plot_analysis_results(ax3,
                                   autologous_all_motifs,
                                   background_all_motifs,
@@ -245,6 +258,8 @@ def set_plotting_details():
     mpl.rcParams["legend.markerscale"] = 1.0
 
 
+
+
 def count_amount_of_motifs_per_experiment(attract, htselex):
 
     number_of_motifs_used = []
@@ -265,8 +280,7 @@ def add_sequence_length_to_infos(infos, subseq, MANE_transcriptome):
 
 
 
-def group_by_motif_id_and_sequence_id(infos, merge_duplicate_motifs=False):
-    motif_subseq = {}
+def group_by_motif_id_and_sequence_id(infos, dict_to_fill_up, merge_duplicate_motifs=False):
     duplicated_matrices = {}
 
     seq_id = infos[0]
@@ -277,168 +291,165 @@ def group_by_motif_id_and_sequence_id(infos, merge_duplicate_motifs=False):
             motif_id = motif_id[:-2] #removes _1 suffix; enables "merging" of matches
             duplicated_matrices[motif_id] = num_of_duplicates
 
-    if motif_id not in motif_subseq:
-        motif_subseq[motif_id] = {}
+    if motif_id not in dict_to_fill_up:
+        dict_to_fill_up[motif_id] = {}
 
-    if seq_id not in motif_subseq[motif_id]:
-        motif_subseq[motif_id][seq_id] = []
+    if seq_id not in dict_to_fill_up[motif_id]:
+        dict_to_fill_up[motif_id][seq_id] = []
 
-    motif_subseq[motif_id][seq_id].append(infos)
-    return motif_subseq, duplicated_matrices
-
-
+    dict_to_fill_up[motif_id][seq_id].append(infos)
+    return duplicated_matrices
 
 
-def calc_coverages_autol_len(infos,
-                             subseq,
-                             duplicated_matrices,
-                             SEED,
-                             MANE_transcriptome,
-                             len_normalize=False,
-                             consider_overlap=False,
-                             background_longer_than_autol_only=False,
-                             normalize_by_num_of_matrices=False):
+
+
+def calc_coverages(matches_by_subseq,
+                   subseq,
+                   duplicated_matrices,
+                   SEED,
+                   MANE_transcriptome,
+                   len_normalize=False,
+                   consider_overlap=False,
+                   background_longer_than_autol_only=False,
+                   normalize_by_num_of_matrices=False):
 
     np.random.seed(SEED)
     coverages = {}
 
-    seq_id = infos[0]
-    motif = infos[1]
+    for motif in matches_by_subseq:
+        coverages[motif] = {}
 
-    coverages[motif] = {}
+        for seq in matches_by_subseq[motif].values(): #all the matches a motif has with a sequence
 
-    for seq in matches_by_subseq[motif].values(): #all the matches a motif has with a sequence
+            autologous_seq_len = len(MANE_transcriptome[motif][subseq]) # get the length of the autologous sequence
+            seq_len = seq[0][4]
+            seq_id = seq[0][0]
+            motif_id = seq[0][1]
 
-        autologous_seq_len = len(MANE_transcriptome[motif][subseq]) # get the length of the autologous sequence
-        seq_len = seq[0][4]
-        seq_id = seq[0][0]
-        motif_id = seq[0][1]
+            if background_longer_than_autol_only: # only include background if the matched sequence is of same length
+                                                  # or longer than autologous sequence
 
-        if background_longer_than_autol_only: # only include background if the matched sequence is of same length
-                                              # or longer than autologous sequence
+                if seq_len >= autologous_seq_len:
 
-            if seq_len >= autologous_seq_len:
+                    for idx in range(len(seq)): # how many matches are there with a single sequence? idx will tell you
 
-                for idx in range(len(seq)): # how many matches are there with a single sequence? idx will tell you
+                        data = seq[idx]
+                        start = int(data[2])
+                        stop = int(data[3])
+
+
+                        if idx == 0:
+                            array = np.zeros(seq_len)
+                            array[start - 1:stop] = 1 # numpy 1:5 means= 2,3,4,5;
+
+                        else:
+
+                            if consider_overlap:
+                                array[start - 1:stop] += 1 # overlaps get added and count more
+
+                            else:
+                                array[start - 1:stop] = 1
+
+
+                    start_idx_range = seq_len-autologous_seq_len
+
+                    if start_idx_range == 0:
+                        cov = [seq_id, motif_id, np.mean(array)]
+                        continue
+
+
+                    start_idx = np.random.randint(0, start_idx_range)
+                    stop_idx = start_idx + autologous_seq_len
+
+                    array = array[start_idx:stop_idx]
+
+                    cov = [seq_id, motif_id, np.mean(array)]
+
+                else:
+                    continue
+
+                if normalize_by_num_of_matrices and len_normalize:
+                    if motif in duplicated_matrices:
+                        num_of_duplicates = duplicated_matrices[motif]
+                    else:
+                        num_of_duplicates = 1
+                    cov[2] = cov[2] / (num_of_duplicates * seq_len)
+                    coverages[motif][seq_id] = cov
+                    continue
+
+                if normalize_by_num_of_matrices:
+                    if motif in duplicated_matrices:
+                        num_of_duplicates = duplicated_matrices[motif]
+                    else:
+                        num_of_duplicates = 1
+                    cov[2] = cov[2] / num_of_duplicates
+                    coverages[motif][seq_id] = cov
+                    continue
+
+                if len_normalize:
+                    cov[2] = cov[2] / seq_len
+                    coverages[motif][seq_id] = cov
+                    continue
+
+                else:
+                    coverages[motif][seq_id] = cov
+
+
+
+            else:
+                for idx in range(len(seq)):
 
                     data = seq[idx]
+                    seq_id = data[0]
+                    motif_id = data[1]
                     start = int(data[2])
                     stop = int(data[3])
-
+                    seq_len = data[4]
 
                     if idx == 0:
                         array = np.zeros(seq_len)
-                        array[start - 1:stop] = 1 # numpy 1:5 means= 2,3,4,5;
+                        array[start - 1:stop] = 1  # numpy 1:5 means= 2,3,4,5;
 
                     else:
 
                         if consider_overlap:
-                            array[start - 1:stop] += 1 # overlaps get added and count more
+                            array[start - 1:stop] += 1  # overlaps get added and count more
 
                         else:
                             array[start - 1:stop] = 1
 
+                cov = [seq_id, motif_id, np.mean(array), seq_len]
 
-                start_idx_range = seq_len-autologous_seq_len
-
-                if start_idx_range == 0:
-                    cov = [seq_id, motif_id, np.mean(array)]
+                if normalize_by_num_of_matrices and len_normalize:
+                    if motif in duplicated_matrices:
+                        num_of_duplicates = duplicated_matrices[motif]
+                    else:
+                        num_of_duplicates = 1
+                    cov[2] = cov[2] / (num_of_duplicates * seq_len)
+                    coverages[motif][seq_id] = cov
                     continue
 
-
-                start_idx = np.random.randint(0, start_idx_range)
-                stop_idx = start_idx + autologous_seq_len
-
-                array = array[start_idx:stop_idx]
-
-                cov = [seq_id, motif_id, np.mean(array)]
-
-            else:
-                continue
-
-            if normalize_by_num_of_matrices and len_normalize:
-                if motif in duplicated_matrices:
-                    num_of_duplicates = duplicated_matrices[motif]
-                else:
-                    num_of_duplicates = 1
-                cov[2] = cov[2] / (num_of_duplicates * seq_len)
-                coverages[motif][seq_id] = cov
-                continue
-
-            if normalize_by_num_of_matrices:
-                if motif in duplicated_matrices:
-                    num_of_duplicates = duplicated_matrices[motif]
-                else:
-                    num_of_duplicates = 1
-                cov[2] = cov[2] / num_of_duplicates
-                coverages[motif][seq_id] = cov
-                continue
-
-            if len_normalize:
-                cov[2] = cov[2] / seq_len
-                coverages[motif][seq_id] = cov
-                continue
-
-            else:
-                coverages[motif][seq_id] = cov
-
-
-
-        else:
-            for idx in range(len(seq)):
-
-                data = seq[idx]
-                seq_id = data[0]
-                motif_id = data[1]
-                start = int(data[2])
-                stop = int(data[3])
-                seq_len = data[4]
-
-                if idx == 0:
-                    array = np.zeros(seq_len)
-                    array[start - 1:stop] = 1  # numpy 1:5 means= 2,3,4,5;
-
-                else:
-
-                    if consider_overlap:
-                        array[start - 1:stop] += 1  # overlaps get added and count more
-
+                if normalize_by_num_of_matrices:
+                    if motif in duplicated_matrices:
+                        num_of_duplicates = duplicated_matrices[motif]
                     else:
-                        array[start - 1:stop] = 1
+                        num_of_duplicates = 1
+                    cov[2] = cov[2] / num_of_duplicates
+                    coverages[motif][seq_id] = cov
+                    continue
 
-            cov = [seq_id, motif_id, np.mean(array), seq_len]
+                if len_normalize:
+                    cov[2] = cov[2] / seq_len
+                    coverages[motif][seq_id] = cov
+                    continue
 
-            if normalize_by_num_of_matrices and len_normalize:
-                if motif in duplicated_matrices:
-                    num_of_duplicates = duplicated_matrices[motif]
                 else:
-                    num_of_duplicates = 1
-                cov[2] = cov[2] / (num_of_duplicates * seq_len)
-                coverages[motif][seq_id] = cov
-                continue
-
-            if normalize_by_num_of_matrices:
-                if motif in duplicated_matrices:
-                    num_of_duplicates = duplicated_matrices[motif]
-                else:
-                    num_of_duplicates = 1
-                cov[2] = cov[2] / num_of_duplicates
-                coverages[motif][seq_id] = cov
-                continue
-
-            if len_normalize:
-                cov[2] = cov[2] / seq_len
-                coverages[motif][seq_id] = cov
-                continue
-
-            else:
-                coverages[motif][seq_id] = cov
+                    coverages[motif][seq_id] = cov
 
 
     return coverages, len_normalize, consider_overlap, normalize_by_num_of_matrices
 # coverages = data; len_norm and consider_overlap are for specifying the mode of analysis during plotting;
-# ppms gives the number of matching motifs to the plot (N = )
-    # coverages: holds motifs and the sequences each motif matched with. For every sequence, there's a coverage
+# coverages: holds motifs and the sequences each motif matched with. For every sequence, there's a coverage
 
 
 
