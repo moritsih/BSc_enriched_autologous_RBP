@@ -266,7 +266,7 @@ def len_cutoff_subseq(cutoff=20):
 
     print(">>> DONE FILTERING FOR SUBSEQUENCE LENGTH\n")
 
-len_cutoff_subseq(cutoff=0)
+len_cutoff_subseq(cutoff=0) #cutoff is not necessary after all since FIMO does this for us
 
 
 

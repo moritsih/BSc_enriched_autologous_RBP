@@ -96,13 +96,20 @@ matches_sorted = sort_matches(matches_raw)
 def read_tsv_file(tsv_file_path):
     with open(tsv_file_path, "r") as f:
         _ = f.readline()
-        content = f.read().split("\n")
+        content = f.readlines().split("\n")
         content = [x for x in content if x and not x.startswith("#")]  # removing bottom lines
         num_of_lines = len(content)
 
         return content, num_of_lines
 
+def read_tsv_file(tsv_file_path):
+    with open(tsv_file_path, "r") as f:
+        _ = f.readline()
+        content = f.readlines().split("\n")
+        content = [x for x in content if not x and x.startswith("#")]  # removing bottom lines
+        num_of_lines = len(content)
 
+    return content, num_of_lines
 
 def generate_info_generator(content):
     for line in content:
