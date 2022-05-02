@@ -125,9 +125,9 @@ def pipeline_for_FIMO_analysis(matches_sorted_dict):
 
             print(">>> EXTRACTING MATCHES FROM FILES ...")
 
-            file_content, num_of_lines = read_tsv_file(tsv_file_path)
+            num_of_lines = get_number_of_lines(tsv_file_path)
 
-            info_generator = generate_info_generator(file_content)
+            info_generator = file_info_generator(tsv_file_path)
 
             array_per_motif_seq_combination = {}
 
@@ -182,29 +182,26 @@ def pipeline_for_FIMO_analysis(matches_sorted_dict):
     plt.show()
 
 
-
-
-
-def read_tsv_file(tsv_file_path):
+def get_number_of_lines(tsv_file_path):
     with open(tsv_file_path, "r") as f:
-        _ = f.readline()
-        content = f.read().split("\n")
-        content = [x for x in content if x and not x.startswith("#")]  # removing bottom lines
-        num_of_lines = len(content)
-
-        return content, num_of_lines
+        _ = f.readline( )
+        num_of_lines = len(f.readlines( ))
+    return num_of_lines
 
 
+def file_info_generator(tsv_file_path):
 
-def generate_info_generator(content):
-    for line in content:
-        line = line.split("\t")
-        motif_id = line[0]
-        seq_id = line[2]
-        start = line[3]
-        stop = line[4]
-        infos = [seq_id, motif_id, start, stop]
-        yield infos
+    with open(tsv_file_path, "r") as f:
+        line = f.readline()
+        if line and not line.startswith("#"):
+            line = line.split("\t")
+            motif_id = line[0]
+            seq_id = line[2]
+            start = line[3]
+            stop = line[4]
+            infos = [seq_id, motif_id, start, stop]
+
+            yield infos
 
 
 
