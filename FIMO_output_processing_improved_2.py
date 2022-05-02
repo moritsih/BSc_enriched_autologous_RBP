@@ -135,9 +135,9 @@ def pipeline_for_FIMO_analysis(matches_sorted_dict):
             for infos in tqdm(info_generator, total=num_of_lines):
 
                 seq_bucket, start, stop = create_array_of_seq_length(infos,
-                                                              array_per_motif_seq_combination,
-                                                              subseq,
-                                                              MANE_transcriptome)
+                                                                     array_per_motif_seq_combination,
+                                                                     subseq,
+                                                                     MANE_transcriptome)
 
                 flip_zeros_to_ones(seq_bucket, start, stop, consider_overlap=False)
 
@@ -192,16 +192,17 @@ def get_number_of_lines(tsv_file_path):
 def file_info_generator(tsv_file_path):
 
     with open(tsv_file_path, "r") as f:
-        line = f.readline()
-        if line and not line.startswith("#"):
-            line = line.split("\t")
-            motif_id = line[0]
-            seq_id = line[2]
-            start = line[3]
-            stop = line[4]
-            infos = [seq_id, motif_id, start, stop]
+        _ = f.readline()
+        for line in f:
+            if line and not line.startswith("#"):
+                line = line.split("\t")
+                motif_id = line[0]
+                seq_id = line[2]
+                start = line[3]
+                stop = line[4]
+                infos = [seq_id, motif_id, start, stop]
 
-            yield infos
+                yield infos
 
 
 
