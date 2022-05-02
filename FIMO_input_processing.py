@@ -185,14 +185,58 @@ print(f">>> NUM OF HT-SELEX MOTIFS (pre-filter): {htselex_ppm_num}\n")
 ###############################################################################################################################################
 
 ppms = {}
-ppms["RNAcompete"] = list(attract_ppms["RNAcomp"].values())
-ppms["SELEX"] = list(attract_ppms["SELEX"].values())
-ppms["HT-SELEX"] = list(htselex_ppms.values())
+ppms["RNAcompete"] = attract_ppms["RNAcomp"]
+ppms["SELEX"] = attract_ppms["SELEX"]
+ppms["HT-SELEX"] = htselex_ppms
+
+def get_list_of_motif_ids(experiment):
+
+    matrix_ids = [x if "_" not in x else x[:-2] for x in list(experiment.keys())]
+    return matrix_ids
+
+def count_number_of_matrices_per_protein(matrix_id_list):
+    return Counter(matrix_id_list)
+
+def plot_matrices_per_protein(ppms):
+
+    fig, ax = plt.subplots(1, 3, figsize=(10,6))
+    fig.suptitle("Number of matrices per protein", size=23)
+    colors = ["red", "orange", "lightblue"]
+
+    for i, exp in enumerate(ppms.keys()):
+        counted_matrices = count_number_of_matrices_per_protein(
+            get_list_of_motif_ids(
+                ppms[exp]
+            )
+        )
+        bins, counts = extract_plotable_data(counted_matrices.values())
+
+        ax[i].bar(x=bins, height=counts, label=exp, color=colors[i])
+        ax[i].set_xticks(np.arange(0, max(bins) + 1, 1))
+        ax[1].set_xlabel("Amount of matrices", labelpad=10.0, size=17)
+        ax[0].set_ylabel("Number of proteins", labelpad=15.0, size=17)
+        ax[i].set_yticks(np.arange(0, max(counts), round(max(counts)/2)))
+        ax[i].legend(loc="upper right", prop={'size': 10})
+
+    plt.tight_layout()
+
+    fig.savefig("DATA/result_plots/number_of_matrices_per_protein.png")
+    #plt.show()
+
+
+def extract_plotable_data(counted_matrices):
+    counter = Counter(counted_matrices)
+    bins = np.arange(min(counter.keys()), max(counter.keys())+1, 1)
+    counts = [0 if x not in counter.keys() else counter[x] for x in bins]
+    return bins, counts
+
+
+plot_matrices_per_protein(ppms)
 
 def extract_list_of_motif_lengths(ppms):
     dict_for_lists = {}
     for exp, motifs in ppms.items( ):
-        dict_for_lists[exp] = sorted(map(len, motifs))
+        dict_for_lists[exp] = sorted(map(len, motifs.values()))
     return dict_for_lists
 
 
@@ -227,7 +271,7 @@ def plot_motif_lengths(counter_dict):
         ax[2].set_xlabel("Distribution of matrix lengths", labelpad=10.0, size=17)
         ax[1].set_ylabel("Matrix occurrences of given length", labelpad=15.0, size=17)
         ax[i].set_xticks(np.arange(0, max(x)+3, 1))
-        ax[i].set_yticks(np.arange(0, max(y), round(max(y)/8)))
+        ax[i].set_yticks(np.arange(0, max(y), round(max(y)/4)))
         ax[i].legend(loc="upper right", prop={'size': 10})
 
     plt.tight_layout()
