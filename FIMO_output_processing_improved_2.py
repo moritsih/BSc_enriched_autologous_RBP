@@ -14,17 +14,13 @@ from tqdm import tqdm
 ###########################################################################
 #CHANGE THESE SETTINGS TO RUN DIFFERENT ANALYSES
 ###########################################################################
-pval_cutoff = "1e-4"#sys.argv[1]
-pval_100 = False
-pval_1000 = False
-pval_10000 = False
+pval_cutoff = sys.argv[1]
 ###########################################################################
 
 if pval_cutoff == "5e-2":
     diagram_title = "Enrichment of autologous binding via FIMO\nFull Transcriptome background\nP-value cutoff: 0.05"
     data_path = os.path.join(os.getcwd( ), "DATA", "FIMO_OUT", "pval5e-2")
     figure_name = "background_transcriptome_pval5e-2"
-
 
 if pval_100 or pval_cutoff == "1e-2":
     diagram_title = "Enrichment of autologous binding via FIMO\nFull Transcriptome background\nP-value cutoff: 1e-2"
@@ -53,6 +49,10 @@ rnacompete_ppms = list(attract_ppms["RNAcomp"].keys( ))
 selex_ppms = list(attract_ppms["SELEX"].keys( ))
 htselex_ppms = list(htselex_ppms.keys( ))
 rbps = [rnacompete_ppms, selex_ppms, htselex_ppms]
+
+
+
+
 
 # stores access to folders where the FIMO-output data lies; for retrieval inside loop
 def store_filenames_for_retrieval(data_path, files):
@@ -86,57 +86,14 @@ def sort_matches(matches_unsorted):
                 if name.startswith(exp_no) and name.endswith(subseq_no):
                     matches_sorter[exp][subseq] = matches_unsorted[file]
 
-        #print(f">>> {exp} IS IN RIGHT SHAPE NOW\n")
-
     return matches_sorter
 
 matches_sorted = sort_matches(matches_raw)
 
 
-def read_tsv_file(tsv_file_path):
-    with open(tsv_file_path, "r") as f:
-        _ = f.readline()
-        content = f.read().split("\n")
-        content = [x for x in content if x and not x.startswith("#")]  # removing bottom lines
-        num_of_lines = len(content)
-
-        return content, num_of_lines
 
 
 
-def generate_info_generator(content):
-    for line in content:
-        line = line.split("\t")
-        motif_id = line[0]
-        seq_id = line[2]
-        start = line[3]
-        stop = line[4]
-
-        infos = [seq_id, motif_id, start, stop]
-
-        yield infos
-
-
-def plot_num_matches(match_dict):
-
-
-    fig, axes = plt.subplots(1, 3, figsize=(18, 5))
-    fig.suptitle("Number of matches - transcriptome background distribution")
-
-    for i, exp in enumerate(matches_sorted.keys( )):
-        subseq_matches = []
-        seqs = list(matches_sorted[exp].keys( ))
-        for seq in seqs:
-            infos = read_tsv_file(matches_sorted[exp][seq])
-            lengths = len(infos)
-            subseq_matches.append(lengths)
-        sns.set_style=("whitegrid")
-        sns.barplot(ax=axes[i], x=seqs, y=subseq_matches)
-        axes[i].set_title(exp)
-
-    plt.show( )
-
-#plot_num_matches(matches_sorted)
 
 
 
@@ -224,6 +181,33 @@ def pipeline_for_FIMO_analysis(matches_sorted_dict):
     plt.savefig(os.path.join(plot_target_path,figure_name))
     plt.show()
 
+
+
+
+
+def read_tsv_file(tsv_file_path):
+    with open(tsv_file_path, "r") as f:
+        _ = f.readline()
+        content = f.read().split("\n")
+        content = [x for x in content if x and not x.startswith("#")]  # removing bottom lines
+        num_of_lines = len(content)
+
+        return content, num_of_lines
+
+
+
+def generate_info_generator(content):
+    for line in content:
+        line = line.split("\t")
+        motif_id = line[0]
+        seq_id = line[2]
+        start = line[3]
+        stop = line[4]
+        infos = [seq_id, motif_id, start, stop]
+        yield infos
+
+
+
 def create_array_of_seq_length(infos, array_sorter, subseq, MANE_transcriptome):
 
     seq_id = infos[0]
@@ -262,6 +246,7 @@ def calculate_coverage_per_seq(cov_arrays, MANE_transcriptome, subseq, length_no
                 matrix_bucket[seq] = np.mean(matrix_bucket[seq])
 
     return cov_arrays
+
 
 
 def set_tqdm_counter_total(match_list):
