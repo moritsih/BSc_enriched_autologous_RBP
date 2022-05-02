@@ -125,14 +125,17 @@ def pipeline_for_FIMO_analysis(matches_sorted_dict):
 
             print(">>> EXTRACTING MATCHES FROM FILES ...")
 
-            num_of_lines = get_number_of_lines(tsv_file_path)
+            #num_of_lines = get_number_of_lines(tsv_file_path)
+
+            #print(">>> GOT NUMBER OF MATCHES ...")
 
             info_generator = file_info_generator(tsv_file_path)
 
             array_per_motif_seq_combination = {}
 
             print(">>> LARGE FILES ARE BEING PROCESSED ...")
-            for infos in tqdm(info_generator, total=num_of_lines):
+            #for infos in tqdm(info_generator, total=num_of_lines):
+            for infos in info_generator:
 
                 seq_bucket, start, stop = create_array_of_seq_length(infos,
                                                                      array_per_motif_seq_combination,
