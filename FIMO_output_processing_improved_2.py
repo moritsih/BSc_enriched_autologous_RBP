@@ -22,17 +22,17 @@ if pval_cutoff == "5e-2":
     data_path = os.path.join(os.getcwd( ), "DATA", "FIMO_OUT", "pval5e-2")
     figure_name = "background_transcriptome_pval5e-2"
 
-if pval_100 or pval_cutoff == "1e-2":
+if pval_cutoff == "1e-2":
     diagram_title = "Enrichment of autologous binding via FIMO\nFull Transcriptome background\nP-value cutoff: 1e-2"
     data_path = os.path.join(os.getcwd(), "DATA", "FIMO_OUT", "pval1e-2")
     figure_name = "background_transcriptome_pval1e-2"
 
-if pval_1000 or pval_cutoff == "1e-3":
+if pval_cutoff == "1e-3":
     diagram_title = "Enrichment of autologous binding via FIMO\nFull Transcriptome background\nP-value cutoff: 1e-3"
     data_path = os.path.join(os.getcwd( ), "DATA", "FIMO_OUT", "pval1e-3")
     figure_name = "background_transcriptome_pval1e-3"
 
-if pval_10000 or pval_cutoff == "1e-4":
+if pval_cutoff == "1e-4":
     diagram_title = "Enrichment of autologous binding via FIMO\nFull Transcriptome background\nP-value cutoff: 1e-4"
     data_path = os.path.join(os.getcwd( ), "DATA", "FIMO_OUT", "pval1e-4")
     figure_name = "background_transcriptome_pval1e-4"
