@@ -1,8 +1,7 @@
-import os
 from additional_code.read_MANE import *
-import random
 import numpy as np
 from matplotlib import pyplot as plt
+from collections import Counter
 
 dict_MANE = dict_MANE
 ###############################################################################################################################################
@@ -173,23 +172,70 @@ RNAcomp_ppm_num = len(attract_ppms["RNAcomp"].keys())
 SELEX_ppm_num = len(attract_ppms["SELEX"].keys())
 htselex_ppm_num = len(htselex_ppms.keys())
 
+
+
 print(">>> DONE CREATING PPM DICTIONARIES FOR FURTHER PROCESSING\n")
 print(f">>> NUM OF ATTRACT RNAcomp MOTIFS (pre-filter): {RNAcomp_ppm_num}\n")
 print(f">>> NUM OF ATTRACT SELEX MOTIFS (pre-filter): {SELEX_ppm_num}\n")
 print(f">>> NUM OF HT-SELEX MOTIFS (pre-filter): {htselex_ppm_num}\n")
 
-def plot_motif_length_distribution(list_of_motif_lengths):
-    list_of_motif_lengths = sorted(list_of_motif_lengths)
-    min = np.min(list_of_motif_lengths)
-    max = np.max(list_of_motif_lengths)
 
-    fig, ax = plt.subplots( )
-    ax.hist(list_of_motif_lengths, bins=np.arange(min, max, 1))
+###############################################################################################################################################
+# PLOTTING LENGTH DISTRIBUTION OF MOTIFS PER EXPERIMENT
+###############################################################################################################################################
 
-    plt.show( )
+ppms = {}
+ppms["RNAcompete"] = list(attract_ppms["RNAcomp"].values())
+ppms["SELEX"] = list(attract_ppms["SELEX"].values())
+ppms["HT-SELEX"] = list(htselex_ppms.values())
+
+def extract_list_of_motif_lengths(ppms):
+    dict_for_lists = {}
+    for exp, motifs in ppms.items( ):
+        dict_for_lists[exp] = sorted(map(len, motifs))
+    return dict_for_lists
 
 
-#plot_motif_length_distribution(array)
+def count_occurrences_of_motif_length(dict_motif_lengths):
+    dict_for_counters = {}
+    for exp, motif_lengths in dict_motif_lengths.items( ):
+        dict_for_counters[exp] = Counter(motif_lengths)
+    return dict_for_counters
+
+
+def make_counter_into_barplot_data(counter_dict):
+    ele_list = [int(x) for x in list(counter_dict.keys( ))]
+    min_ele = np.min(ele_list)
+    max_ele = np.max(ele_list)
+    keys = np.arange(min_ele, max_ele + 1, 1)
+    values = [0 if x not in counter_dict.keys( ) else counter_dict[x] for x in keys]
+
+    return keys, values
+
+
+def plot_motif_lengths(counter_dict):
+    fig, ax = plt.subplots(3, 1, figsize=(10, 6))
+    fig.suptitle("Motif lengths by experiment", size=25)
+    colors = ["red", "orange", "lightblue"]
+
+
+    for i, exp in enumerate(counter_dict.keys( )):
+
+        x, y = make_counter_into_barplot_data(counter_dict[exp])
+
+        ax[i].bar(x, y, width = 0.5, label=exp, color=colors[i], alpha=0.5, linewidth=0.5)
+        ax[2].set_xlabel("Distribution of matrix lengths", labelpad=10.0, size=17)
+        ax[1].set_ylabel("Matrix occurrences of given length", labelpad=15.0, size=17)
+        ax[i].set_xticks(np.arange(0, max(x)+3, 1))
+        ax[i].set_yticks(np.arange(0, max(y), round(max(y)/8)))
+        ax[i].legend(loc="upper right", prop={'size': 10})
+
+    plt.tight_layout()
+    fig.savefig("DATA/result_plots/motif_length_distributions.png")
+    #plt.show( )
+
+plot_motif_lengths(count_occurrences_of_motif_length(extract_list_of_motif_lengths(ppms)))
+
 
 def plot_num_of_motifs_per_protein(ppms):
     from collections import Counter
