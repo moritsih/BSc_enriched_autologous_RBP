@@ -10,6 +10,7 @@ MANE_transcriptome = MANE_transcriptome
 from additional_code.load_histograms import vertical_hist
 import seaborn as sns
 from tqdm import tqdm
+import mmap
 
 ###########################################################################
 #CHANGE THESE SETTINGS TO RUN DIFFERENT ANALYSES
@@ -125,17 +126,17 @@ def pipeline_for_FIMO_analysis(matches_sorted_dict):
 
             print(">>> EXTRACTING MATCHES FROM FILES ...")
 
-            #num_of_lines = get_number_of_lines(tsv_file_path)
+            num_of_lines = get_number_of_lines(tsv_file_path)
 
-            #print(">>> GOT NUMBER OF MATCHES ...")
+            print(">>> GOT NUMBER OF MATCHES ...")
 
             info_generator = file_info_generator(tsv_file_path)
 
             array_per_motif_seq_combination = {}
 
             print(">>> LARGE FILES ARE BEING PROCESSED ...")
-            #for infos in tqdm(info_generator, total=num_of_lines):
-            for infos in info_generator:
+            for infos in tqdm(info_generator, total=num_of_lines):
+            #for infos in info_generator:
 
                 seq_bucket, start, stop = create_array_of_seq_length(infos,
                                                                      array_per_motif_seq_combination,
@@ -187,25 +188,32 @@ def pipeline_for_FIMO_analysis(matches_sorted_dict):
 
 def get_number_of_lines(tsv_file_path):
     with open(tsv_file_path, "r") as f:
-        _ = f.readline( )
-        num_of_lines = len(f.readlines( ))
-    return num_of_lines
+        with mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ) as mm:
+            total_lines = 0
+            while mm.readline():
+                total_lines += 1
+    return total_lines
 
 
 def file_info_generator(tsv_file_path):
 
     with open(tsv_file_path, "r") as f:
-        _ = f.readline()
-        for line in f:
-            if line and not line.startswith("#"):
-                line = line.split("\t")
-                motif_id = line[0]
-                seq_id = line[2]
-                start = line[3]
-                stop = line[4]
-                infos = [seq_id, motif_id, start, stop]
+        with mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ) as mm:
+            _ = mm.readline()
+            while True:
+                line = mm.readline()
+                if not line:
+                    break
+                line = line.decode('UTF-8')
+                if not line.startswith('#'):
+                    line = line.split("\t")
+                    motif_id = line[0]
+                    seq_id = line[2]
+                    start = line[3]
+                    stop = line[4]
+                    infos = [seq_id, motif_id, start, stop]
 
-                yield infos
+                    yield infos
 
 
 
