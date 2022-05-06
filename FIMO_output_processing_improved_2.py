@@ -21,22 +21,22 @@ pval_cutoff = sys.argv[1]
 if pval_cutoff == "5e-2":
     diagram_title = "Enrichment of autologous binding via FIMO\nFull Transcriptome background\nP-value cutoff: 0.05"
     data_path = os.path.join(os.getcwd( ), "DATA", "FIMO_OUT", "pval5e-2")
-    figure_name = "background_transcriptome_pval5e-2"
+    figure_name = "no_multiple_motifs_pval5e-2"
 
 if pval_cutoff == "1e-2":
     diagram_title = "Enrichment of autologous binding via FIMO\nFull Transcriptome background\nP-value cutoff: 1e-2"
     data_path = os.path.join(os.getcwd(), "DATA", "FIMO_OUT", "pval1e-2")
-    figure_name = "background_transcriptome_pval1e-2"
+    figure_name = "no_multiple_motifs_pval1e-2"
 
 if pval_cutoff == "1e-3":
     diagram_title = "Enrichment of autologous binding via FIMO\nFull Transcriptome background\nP-value cutoff: 1e-3"
     data_path = os.path.join(os.getcwd( ), "DATA", "FIMO_OUT", "pval1e-3")
-    figure_name = "background_transcriptome_pval1e-3"
+    figure_name = "no_multiple_motifs_pval1e-3"
 
 if pval_cutoff == "1e-4":
     diagram_title = "Enrichment of autologous binding via FIMO\nFull Transcriptome background\nP-value cutoff: 1e-4"
     data_path = os.path.join(os.getcwd( ), "DATA", "FIMO_OUT", "pval1e-4")
-    figure_name = "background_transcriptome_pval1e-4"
+    figure_name = "no_multiple_motifs_pval1e-4"
 
 files = os.listdir(data_path)  # list of directiories containing output tsv files (& other files)
 plot_target_path = os.path.join(os.getcwd( ), "DATA", "result_plots")
@@ -303,28 +303,6 @@ def add_sequence_length_to_infos(infos, subseq, MANE_transcriptome):
 
 
 
-def group_by_motif_id_and_sequence_id(infos, dict_to_fill_up, merge_duplicate_motifs=False):
-    duplicated_matrices = {}
-
-    seq_id = infos[0]
-    motif_id = infos[1]
-    if merge_duplicate_motifs: # Some RBPs had multiple matrices; Merge matches to 1 or keep separate?
-        if "_" in motif_id:
-            num_of_duplicates = int(motif_id[-1]) + 1 # if matrix has suffix _4, then it'll store "5"
-            motif_id = motif_id[:-2] #removes _1 suffix; enables "merging" of matches
-            duplicated_matrices[motif_id] = num_of_duplicates
-
-    if motif_id not in dict_to_fill_up:
-        dict_to_fill_up[motif_id] = {}
-
-    if seq_id not in dict_to_fill_up[motif_id]:
-        dict_to_fill_up[motif_id][seq_id] = []
-
-    dict_to_fill_up[motif_id][seq_id].append(infos)
-    return duplicated_matrices
-
-
-
 
 def calc_coverages(matches_by_subseq,
                    subseq,
@@ -482,7 +460,6 @@ def get_mean_std(matches_by_sequences):
     std_cov = []
 
     for box in matches_by_sequences.values():
-        #box = all sequences a motif matched with
         mean_cov.append(box)
         std_cov.append(box)
 
