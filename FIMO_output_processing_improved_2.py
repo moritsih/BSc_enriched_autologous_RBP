@@ -15,7 +15,7 @@ import mmap
 ###########################################################################
 #CHANGE THESE SETTINGS TO RUN DIFFERENT ANALYSES
 ###########################################################################
-pval_cutoff = sys.argv[1]
+pval_cutoff = "1e-4"#sys.argv[1]
 ###########################################################################
 
 if pval_cutoff == "5e-2":
@@ -281,7 +281,8 @@ def set_plotting_details():
     mpl.rcParams["legend.markerscale"] = 1.0
 
 
-
+def count_amount_of_matrices_that_matched(list_of_matching_matrices):
+    return len(list_of_matching_matrices)
 
 def count_amount_of_motifs_per_experiment(attract, htselex):
 
@@ -557,7 +558,7 @@ def plot_analysis_results(ax3, autologous, background, pvalue, ppms, i, l, subse
     autologous_points_horizontal_step = [0.05, 0.1, 0.15, 0.2]
     point_colors = ["red", "orange", "lightblue", "blue"]
     p_value_position = [-7, -7.5, -8, -8.5]
-
+    num_matching_matrices = count_amount_of_matrices_that_matched(autologous)
 
     ##########################################################
     # PLOT LEFT SIDE of individual diagrams (autologous part):
@@ -648,7 +649,7 @@ def plot_analysis_results(ax3, autologous, background, pvalue, ppms, i, l, subse
     #Write number of RBPs and p values for different experiments:
     ax3.text(i,
              -6.5,
-             "N = %.0f"%ppms[i],
+             "N = %i of %i"% (num_matching_matrices, ppms[i]),
              ha="center")
 
 
