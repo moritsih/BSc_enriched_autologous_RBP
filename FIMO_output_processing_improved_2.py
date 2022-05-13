@@ -11,11 +11,12 @@ from additional_code.load_histograms import vertical_hist
 import seaborn as sns
 from tqdm import tqdm
 import mmap
+from collections import Counter
 
 ###########################################################################
 #CHANGE THESE SETTINGS TO RUN DIFFERENT ANALYSES
 ###########################################################################
-pval_cutoff = sys.argv[1]
+pval_cutoff = "1e-4"#sys.argv[1]
 ###########################################################################
 
 if pval_cutoff == "5e-2":
@@ -145,11 +146,16 @@ def pipeline_for_FIMO_analysis(matches_sorted_dict):
 
                 flip_zeros_to_ones(seq_bucket, start, stop, consider_overlap=False)
 
+            num_of_matrices = get_number_of_matrices_per_protein(array_per_motif_seq_combination)
+            print(">>> FETCHING NUMBER OF MATRICES PER PROTEIN ...")
+
             print(">>> COVERAGES ARE BEING COMPUTED ...")
             infos = calculate_coverage_per_seq(array_per_motif_seq_combination,
                                                MANE_transcriptome,
                                                subseq,
-                                               length_normalization=False)
+                                               num_of_matrices,
+                                               length_normalization=False,
+                                               normalize_by_num_of_matrices=True)
 
             autologous_all_motifs = []
             background_all_motifs = []
@@ -241,16 +247,46 @@ def flip_zeros_to_ones(zero_array, start, stop, consider_overlap=False):
     else:
         zero_array[start:stop] =+ 1
 
+def get_number_of_matrices_per_protein(cov_arrays):
+    matrices = []
+    for matrix in cov_arrays.keys():
+        matrix_id = matrix
+        if "_" in matrix:
+            matrix_id = matrix[:-2]
+        matrices.append(matrix)
 
-def calculate_coverage_per_seq(cov_arrays, MANE_transcriptome, subseq, length_normalization=False):
+    counted_matrices = Counter(matrices)
+    return counted_matrices # dictionary containing protein IDs (keys) and the number of matrices(vals)
+
+
+
+
+def calculate_coverage_per_seq(cov_arrays,
+                               MANE_transcriptome,
+                               subseq,
+                               num_of_matrices,
+                               length_normalization=False,
+                               normalize_by_num_of_matrices=False):
+
     for matrix in cov_arrays.keys( ):
         matrix_bucket = cov_arrays[matrix]
+        matrices_per_protein = num_of_matrices[matrix]
 
         for seq in matrix_bucket.keys( ):
             seq_len = len(MANE_transcriptome[seq][subseq])
 
+            if normalize_by_num_of_matrices and length_normalization:
+                matrix_bucket[seq] = np.mean(matrix_bucket[seq]) / matrices_per_protein * seq_len
+                continue
+
+            if normalize_by_num_of_matrices:
+                matrix_bucket[seq] = np.mean(matrix_bucket[seq]) / matrices_per_protein
+                continue
+
             if length_normalization:
                 matrix_bucket[seq] = np.mean(matrix_bucket[seq]) / seq_len
+                continue
+
             else:
                 matrix_bucket[seq] = np.mean(matrix_bucket[seq])
 
