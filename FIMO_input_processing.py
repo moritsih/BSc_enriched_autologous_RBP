@@ -56,15 +56,15 @@ def extract_selex_ppm(selex_ppm, f_only_monomer=True):
                 elif gene_id not in dict_MANE:
                     continue
 
-               # elif gene_id in gene_ids_with_duplicates:
-                #    counter_for_matrix_duplicates = gene_ids_with_duplicates.count(gene_id)
-                 #   gene_ids_with_duplicates.append(gene_id)
-                  #  gene_id = gene_id + "_" + str(counter_for_matrix_duplicates)
-                   # dict_htselex_ppms[gene_id] = dict_curr_PPM
-                    #continue
+                elif gene_id in gene_ids_with_duplicates:
+                    counter_for_matrix_duplicates = gene_ids_with_duplicates.count(gene_id)
+                    gene_ids_with_duplicates.append(gene_id)
+                    gene_id = gene_id + "_" + str(counter_for_matrix_duplicates)
+                    dict_htselex_ppms[gene_id] = dict_curr_PPM
+                    continue
 
                 else:
-                    #gene_ids_with_duplicates.append(gene_id)
+                    gene_ids_with_duplicates.append(gene_id)
                     dict_htselex_ppms[gene_id] = dict_curr_PPM
 
 
@@ -132,26 +132,26 @@ def read_db_attract(f_organism, f_experiment, f_score=True, f_mutated=False):
             if Gene_id not in dict_MANE:
                 continue
 
-            #if Gene_id in gene_ids_with_duplicates:
-             #   if f_experiment == "RNAcompete": # RNAcompete entries only have 1 matrix/protein that has score with "**"
-              #      # therefore all but 1 entry are filtered out, allowing for this way of including multiple matrices/protein
-               #     counter_for_matrix_duplicates = gene_ids_with_duplicates.count(Gene_id)
-                #    gene_ids_with_duplicates.append(Gene_id)
-                 #   Gene_id = Gene_id+"_"+str(counter_for_matrix_duplicates)
-                  #  dict_attract_db[Gene_id] = Matrix_id
-                   # continue
+            if Gene_id in gene_ids_with_duplicates:
+                if f_experiment == "RNAcompete": # RNAcompete entries only have 1 matrix/protein that has score with "**"
+                    # therefore all but 1 entry are filtered out, allowing for this way of including multiple matrices/protein
+                    counter_for_matrix_duplicates = gene_ids_with_duplicates.count(Gene_id)
+                    gene_ids_with_duplicates.append(Gene_id)
+                    Gene_id = Gene_id+"_"+str(counter_for_matrix_duplicates)
+                    dict_attract_db[Gene_id] = Matrix_id
+                    continue
 
-            #    if f_experiment == "SELEX":
-             #       if Matrix_id in dict_attract_db.values():
-              #          continue
-               #     else:
-                #        counter_for_matrix_duplicates = gene_ids_with_duplicates.count(Gene_id)
-                 #       gene_ids_with_duplicates.append(Gene_id)
-                  #      Gene_id = Gene_id + "_" + str(counter_for_matrix_duplicates)
-                   #     dict_attract_db[Gene_id] = Matrix_id
-                    #    continue
+                if f_experiment == "SELEX":
+                    if Matrix_id in dict_attract_db.values():
+                        continue
+                    else:
+                        counter_for_matrix_duplicates = gene_ids_with_duplicates.count(Gene_id)
+                        gene_ids_with_duplicates.append(Gene_id)
+                        Gene_id = Gene_id + "_" + str(counter_for_matrix_duplicates)
+                        dict_attract_db[Gene_id] = Matrix_id
+                        continue
 
-            #gene_ids_with_duplicates.append(Gene_id)
+            gene_ids_with_duplicates.append(Gene_id)
 
             dict_attract_db[Gene_id] = Matrix_id
 
