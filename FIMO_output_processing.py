@@ -16,26 +16,26 @@ from collections import Counter
 ###########################################################################
 #CHANGE THESE SETTINGS TO RUN DIFFERENT ANALYSES
 ###########################################################################
-pval_cutoff = "1e-4"#sys.argv[1]
+pval_cutoff = sys.argv[1]
 ###########################################################################
 
 if pval_cutoff == "5e-2":
-    diagram_title = "Enrichment of autologous binding via FIMO - P-value cutoff: 0.05"
+    diagram_title = "Enrichment of autologous binding via FIMO - P-value cutoff: 0.05\nNormalized by # of matrices per protein"
     data_path = os.path.join(os.getcwd( ), "DATA", "FIMO_OUT", "pval5e-2")
     figure_name = "no_multiple_motifs_pval5e-2"
 
 if pval_cutoff == "1e-2":
-    diagram_title = "Enrichment of autologous binding via FIMO - P-value cutoff: 1e-2\n"
+    diagram_title = "Enrichment of autologous binding via FIMO - P-value cutoff: 1e-2\nNormalized by # of matrices per protein"
     data_path = os.path.join(os.getcwd(), "DATA", "FIMO_OUT", "pval1e-2")
     figure_name = "no_multiple_motifs_pval1e-2"
 
 if pval_cutoff == "1e-3":
-    diagram_title = "Enrichment of autologous binding via FIMO - P-value cutoff: 1e-3"
+    diagram_title = "Enrichment of autologous binding via FIMO - P-value cutoff: 1e-3\nNormalized by # of matrices per protein"
     data_path = os.path.join(os.getcwd( ), "DATA", "FIMO_OUT", "pval1e-3")
     figure_name = "no_multiple_motifs_pval1e-3"
 
 if pval_cutoff == "1e-4":
-    diagram_title = "Enrichment of autologous binding via FIMO - P-value cutoff: 1e-4"
+    diagram_title = "Enrichment of autologous binding via FIMO - P-value cutoff: 1e-4\nNormalized by # of matrices per protein"
     data_path = os.path.join(os.getcwd( ), "DATA", "FIMO_OUT", "pval1e-4")
     figure_name = "no_multiple_motifs_pval1e-4"
 
