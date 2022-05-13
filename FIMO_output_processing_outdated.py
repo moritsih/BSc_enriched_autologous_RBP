@@ -1,5 +1,4 @@
 import os
-import sys
 from matplotlib import pyplot as plt
 import numpy as np
 import matplotlib as mpl
@@ -10,6 +9,7 @@ MANE_transcriptome = MANE_transcriptome
 from additional_code.load_histograms import vertical_hist
 import seaborn as sns
 from tqdm import tqdm
+import sys
 
 ###########################################################################
 #CHANGE THESE SETTINGS TO RUN DIFFERENT ANALYSES
@@ -21,23 +21,23 @@ pval_10000 = False
 ###########################################################################
 
 if pval_cutoff == "5e-2":
-    diagram_title = "Enrichment of autologous binding via FIMO\nFull Transcriptome background\nP-value cutoff: 0.05"
+    diagram_title = "Enrichment of autologous binding via FIMO: P-value cutoff 0.05"
     data_path = os.path.join(os.getcwd( ), "DATA", "FIMO_OUT", "pval5e-2")
     figure_name = "background_transcriptome_pval5e-2"
 
 
 if pval_100 or pval_cutoff == "1e-2":
-    diagram_title = "Enrichment of autologous binding via FIMO\nFull Transcriptome background\nP-value cutoff: 1e-2"
+    diagram_title = "Enrichment of autologous binding via FIMO: P-value cutoff 1e-2"
     data_path = os.path.join(os.getcwd(), "DATA", "FIMO_OUT", "pval1e-2")
     figure_name = "background_transcriptome_pval1e-2"
 
 if pval_1000 or pval_cutoff == "1e-3":
-    diagram_title = "Enrichment of autologous binding via FIMO\nFull Transcriptome background\nP-value cutoff: 1e-3"
+    diagram_title = "Enrichment of autologous binding via FIMO: P-value cutoff 1e-3"
     data_path = os.path.join(os.getcwd( ), "DATA", "FIMO_OUT", "pval1e-3")
     figure_name = "background_transcriptome_pval1e-3"
 
 if pval_10000 or pval_cutoff == "1e-4":
-    diagram_title = "Enrichment of autologous binding via FIMO\nFull Transcriptome background\nP-value cutoff: 1e-4"
+    diagram_title = "Enrichment of autologous binding via FIMO: P-value cutoff 1e-4"
     data_path = os.path.join(os.getcwd( ), "DATA", "FIMO_OUT", "pval1e-4")
     figure_name = "background_transcriptome_pval1e-4"
 
@@ -62,8 +62,6 @@ def store_filenames_for_retrieval(data_path, files):
     for file in files:  # loop through files with different experiment/subsequence combinations
         tsv_file_path = os.path.join(data_path, file)
         matches_files[file] = tsv_file_path
-
-        print(f">>> FETCHED MATCHES FROM {file}\n")
 
     return matches_files
 
@@ -98,30 +96,26 @@ def read_tsv_file(tsv_file_path):
         _ = f.readline()
         content = f.read().split("\n")
         content = [x for x in content if x and not x.startswith("#")]  # removing bottom lines
-        num_of_lines = len(content)
 
-        return content, num_of_lines
+        infos = []
+        for line in content:
+            line = line.split("\t")
+            motif_id = line[0]
+            seq_id = line[2]
+            start = line[3]
+            stop = line[4]
+            infos.append([seq_id, motif_id, start, stop])
 
-
-
-def generate_info_generator(content):
-    for line in content:
-        line = line.split("\t")
-        motif_id = line[0]
-        seq_id = line[2]
-        start = line[3]
-        stop = line[4]
-
-        infos = [seq_id, motif_id, start, stop]
-
-        yield infos
-
+        return infos
 
 def plot_num_matches(match_dict):
-
+    global individual_background, transcriptome_background
 
     fig, axes = plt.subplots(1, 3, figsize=(18, 5))
-    fig.suptitle("Number of matches - transcriptome background distribution")
+    if individual_background:
+        fig.suptitle("Number of matches - background distributions by subsequences")
+    if transcriptome_background:
+        fig.suptitle("Number of matches - transcriptome background distribution")
 
     for i, exp in enumerate(matches_sorted.keys( )):
         subseq_matches = []
@@ -150,12 +144,12 @@ def pipeline_for_FIMO_analysis(matches_sorted_dict):
 
     SEED = 1234
 
+    set_plotting_details( )
+
     fig = plt.figure(figsize=[18.3 / 2.54, 11.0 / 2.54], constrained_layout=True, dpi=300)
     grid = fig.add_gridspec(1, 1)
     ax3 = plt.subplot(grid[0, 0])
     ax3.set_title(diagram_title)
-
-    set_plotting_details( )
 
     # great outer loop for going through files
     for i, exp in enumerate(experiments):
@@ -167,22 +161,13 @@ def pipeline_for_FIMO_analysis(matches_sorted_dict):
             tsv_file_path = matches_sorted[exp][subseq]
 
             print(">>> EXTRACTING MATCHES FROM FILES ...")
+            infos = read_tsv_file(tsv_file_path)
 
-            file_content, num_of_lines = read_tsv_file(tsv_file_path)
-
-            info_generator = generate_info_generator(file_content)
-
-            infos_grouped_by_motifs_and_seqs = {}
+            print(">>> ADDING SEQUENCE LENGTHS TO MATCHES")
+            add_sequence_length_to_infos(infos, subseq)
 
             print(">>> DATA IS BEING SORTED ...")
-            for idx, infos in tqdm(enumerate(info_generator), total=num_of_lines):
-
-                add_sequence_length_to_infos(infos, subseq, MANE_transcriptome)
-
-                duplicated_matrices = group_by_motif_id_and_sequence_id(infos, infos_grouped_by_motifs_and_seqs)
-
-                if idx % 10000 == 0:
-                    print("Dict size:"+str(sys.getsizeof(infos_grouped_by_motifs_and_seqs)))
+            infos, duplicated_matrices = group_by_motif_id_and_sequence_id(infos)
 
             print(f"grouping by motif and sequence is not the problem for {exp} - {subseq}")
 
@@ -190,20 +175,21 @@ def pipeline_for_FIMO_analysis(matches_sorted_dict):
             infos, \
             len_normalize, \
             consider_overlap, \
-            normalize_by_num_of_matrices = calc_coverages(infos_grouped_by_motifs_and_seqs,
-                                                          subseq,
-                                                          duplicated_matrices,
-                                                          SEED,
-                                                          MANE_transcriptome,
-                                                          len_normalize=False,
-                                                          consider_overlap=False,
-                                                          background_longer_than_autol_only=False,
-                                                          normalize_by_num_of_matrices=False)
+            normalize_by_num_of_matrices = calc_coverages(infos,
+                                                            subseq,
+                                                            duplicated_matrices,
+                                                            SEED,
+                                                            MANE_transcriptome,
+                                                            len_normalize=False,
+                                                            consider_overlap=False,
+                                                            background_longer_than_autol_only=False,
+                                                            normalize_by_num_of_matrices=False)
 
             print(f"coverage is not the problem for {exp} - {subseq}")
 
             autologous_all_motifs = []
             background_all_motifs = []
+
 
             print(">>> MEAN+STDS ARE BEING CALCULATED AND Z-SCORES ARE BEING COMPUTED ...")
             for motif in infos.keys():
@@ -217,10 +203,11 @@ def pipeline_for_FIMO_analysis(matches_sorted_dict):
 
             print(f"mean/std are not the problem for {exp} - {subseq}")
 
+
             print(">>> P-VALUES ARE BEING CALCULATED ...")
             p_val = binary_vs_averaged(autologous_all_motifs, background_all_motifs, ranked="no", side="higher")
 
-            number_of_motifs_used = count_amount_of_motifs_per_experiment(attract_ppms, htselex_ppms)
+            number_of_motifs_used = count_amount_of_matrices_per_experiment(attract_ppms, htselex_ppms)
 
             print(">>> PUTTING INTO PLOT ...")
             plot_analysis_results(ax3,
@@ -238,16 +225,12 @@ def pipeline_for_FIMO_analysis(matches_sorted_dict):
     plt.show()
 
 
-def set_tqdm_counter_total(match_list):
-    return len(match_list)
-
-
 def set_plotting_details():
 
     size_tiny = 3
     size_small = 5
-    size_medium = 9
-    size_big = 12
+    size_medium = 7
+    size_big = 14
     plt.rcParams["axes.facecolor"] = "white"
     plt.rcParams["font.family"] = "Calibri"
     plt.rcParams["lines.markersize"] = 4
@@ -261,9 +244,7 @@ def set_plotting_details():
     mpl.rcParams["legend.markerscale"] = 1.0
 
 
-
-
-def count_amount_of_motifs_per_experiment(attract, htselex):
+def count_amount_of_matrices_per_experiment(attract, htselex):
 
     number_of_motifs_used = []
     for k in attract.keys():
@@ -274,34 +255,43 @@ def count_amount_of_motifs_per_experiment(attract, htselex):
     return number_of_motifs_used
 
 
-
-def add_sequence_length_to_infos(infos, subseq, MANE_transcriptome):
-
-    seq_id = infos[0]
-    seq_len = len(MANE_transcriptome[seq_id][subseq])
-    infos.append(seq_len)
+def count_amount_of_matrices_that_matched(list_of_matching_matrices):
+    return len(list_of_matching_matrices)
 
 
 
-def group_by_motif_id_and_sequence_id(infos, dict_to_fill_up, merge_duplicate_motifs=False):
+def add_sequence_length_to_infos(infos, subseq):
+    global MANE_transcriptome
+
+    for i in range(len(infos)):
+        seq_id = infos[i][0]
+        seq_len = len(MANE_transcriptome[seq_id][subseq])
+        infos[i].append(seq_len)
+
+
+
+def group_by_motif_id_and_sequence_id(matches_by_motif, merge_duplicate_motifs=False):
+    motif_subseq = {}
     duplicated_matrices = {}
 
-    seq_id = infos[0]
-    motif_id = infos[1]
-    if merge_duplicate_motifs: # Some RBPs had multiple matrices; Merge matches to 1 or keep separate?
-        if "_" in motif_id:
-            num_of_duplicates = int(motif_id[-1]) + 1 # if matrix has suffix _4, then it'll store "5"
-            motif_id = motif_id[:-2] #removes _1 suffix; enables "merging" of matches
-            duplicated_matrices[motif_id] = num_of_duplicates
+    for match in matches_by_motif:
+        seq_id = match[0]
+        motif_id = match[1]
+        if merge_duplicate_motifs: # Some RNAcompete RBPs had multiple matrices; Merge matches to 1 or keep separate?
+            if "_" in motif_id:
+                num_of_duplicates = int(motif_id[-1]) + 1 # if matrix has suffix _4, then it'll store "5"
+                motif_id = motif_id[:-2] #removes _1 suffix; enables "merging" of matches
+                duplicated_matrices[motif_id] = num_of_duplicates
 
-    if motif_id not in dict_to_fill_up:
-        dict_to_fill_up[motif_id] = {}
+        if motif_id not in motif_subseq:
+            motif_subseq[motif_id] = {}
 
-    if seq_id not in dict_to_fill_up[motif_id]:
-        dict_to_fill_up[motif_id][seq_id] = []
+        if seq_id not in motif_subseq[motif_id]:
+            motif_subseq[motif_id][seq_id] = []
 
-    dict_to_fill_up[motif_id][seq_id].append(infos)
-    return duplicated_matrices
+        motif_subseq[motif_id][seq_id].append(match)
+
+    return motif_subseq, duplicated_matrices
 
 
 
@@ -498,28 +488,6 @@ def calc_z_scores(coverages_by_motif, mean_cov, std_cov):
     return autologous, background
 
 
-def pie_plot():
-    subsequences = ["autologous UTR3", "autologous UTR5", "autologous CDS", "autologous transcript"]
-
-    fig = plt.figure()
-
-    colors = ['b', 'g', 'r', 'c']
-    global experiments, final_distributions
-    for i, exp in enumerate(experiments):
-        x = 131
-        ax = fig.add_subplot(x+i)
-        data = []
-        for subseq in subsequences:
-            data.append(len(final_distributions[exp][subseq]))
-        ax.set_title(exp)
-        ax.pie(data, labels=subsequences,
-               colors=colors,
-               textprops={'fontsize': 8},
-               autopct='%.1f%%')
-    #plt.tight_layout()
-    plt.show()
-
-#pie_plot()
 
 def z_score_plot():
     global experiments, final_distributions
@@ -603,18 +571,16 @@ def binary_vs_averaged(bi_ls, bi_ls_ls, ranked="no", side="higher"):
 # are calculated. The plot is then shown on screen.
 def plot_analysis_results(ax3, autologous, background, pvalue, ppms, i, l, subseq):
 
-    # As different subsequences need slighly different settings, I use "l" to go through these lists
+    # As different subsequences need slighly different settings, I use "l" to index the list positions
     autologous_points_horizontal_step = [0.05, 0.1, 0.15, 0.2]
     point_colors = ["red", "orange", "lightblue", "blue"]
     p_value_position = [-7, -7.5, -8, -8.5]
-
+    num_matching_matrices = count_amount_of_matrices_that_matched(autologous)
 
     ##########################################################
     # PLOT LEFT SIDE of individual diagrams (autologous part):
     ##########################################################
     if i == 0:
-
-
 
         ax3.scatter([i-autologous_points_horizontal_step[l]] * len(autologous),
                     autologous,
@@ -698,7 +664,7 @@ def plot_analysis_results(ax3, autologous, background, pvalue, ppms, i, l, subse
     #Write number of RBPs and p values for different experiments:
     ax3.text(i,
              -6.5,
-             "N = %.0f"%ppms[i],
+             "N = %i of %i"% (num_matching_matrices, ppms[i]),
              ha="center")
 
 
